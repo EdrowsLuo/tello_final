@@ -1,0 +1,6 @@
+classes= 4
+train  = /home/tello/yolov3/data/train.txt
+valid  = /home/tello/yolov3/data/test.txt
+names = data/ball.names
+backup = backup/
+eval = coco

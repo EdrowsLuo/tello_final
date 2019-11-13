@@ -5,6 +5,10 @@ import numpy as np
 import libh264decoder
 from stats import Stats
 
+class TimeoutException(Exception):
+    def __init__(self, msg):
+        super.__init__(msg)
+
 class Tello:
     """Wrapper class to interact with the Tello drone."""
 
@@ -22,23 +26,29 @@ class Tello:
         :param tello_port (int): Tello port.
         """
 
+        self.do_print_info = True
+        self.filter = None
+        self.request_lock = threading.Lock()
+        self.response_handler_lock = threading.Lock()
+        self.response_handler = None
+
         self.abort_flag = False
         self.decoder = libh264decoder.H264Decoder()
         self.command_timeout = command_timeout
         self.imperial = imperial
-        self.response = None  
+        self.response = None
         self.frame = None  # numpy array BGR -- current camera output frame
         self.is_freeze = False  # freeze current camera output
         self.last_frame = None
-        
+
         self.log = []
         self.MAX_TIME_OUT = 10.0
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # socket for sending cmd
         self.socket_video = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # socket for receiving video stream
 
-        self.socket_state=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)#state socket
-        self.tello_ip=tello_ip
+        self.socket_state = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # state socket
+        self.tello_ip = tello_ip
         self.tello_address = (tello_ip, tello_port)
         self.local_video_port = 11111  # port for receiving video stream
         self.last_height = 0
@@ -63,12 +73,20 @@ class Tello:
         self.receive_video_thread.daemon = True
         self.receive_video_thread.start()
 
-        #state receive
-        self.results=None
-        self.socket_state.bind((local_ip,8890))
-        self.receive_state_thread=threading.Thread(target=self._recevie_state_thread)
-        self.receive_state_thread.daemon=True
+        # state receive
+        self.results = None
+        self.socket_state.bind((local_ip, 8890))
+        self.receive_state_thread = threading.Thread(target=self._recevie_state_thread)
+        self.receive_state_thread.daemon = True
         self.receive_state_thread.start()
+
+        self.stop = False
+
+    def print_info(self, msg):
+        if self.do_print_info:
+            if self.filter is not None and not self.filter(msg):
+                return
+            print ("\033[33m[base]\033[0m %s" % msg)
 
     def __del__(self):
         """Closes the local socket."""
@@ -76,15 +94,16 @@ class Tello:
         self.socket.close()
         self.socket_video.close()
         self.socket_state.close()
-    
+
     def read_frame(self):
         """Return the last frame from camera."""
         if self.is_freeze:
             return self.last_frame
         else:
             return self.frame
+
     def read_state(self):
-        if self.results=='ok' or self.results==None:
+        if self.results == 'ok' or self.results == None:
             return self.results
         else:
             return self.results[0:8]
@@ -101,14 +120,33 @@ class Tello:
         Runs as a thread, sets self.response to whatever the Tello last returned.
 
         """
+
         while True:
             try:
                 self.response, ip = self.socket.recvfrom(3000)
-                if len(self.log)!=0:
+                if len(self.log) != 0:
+                    self._on_response(self.response)
                     self.log[-1].add_response(self.response)
-                    #print(self.response)
+                    # self.print_info(self.response)
             except socket.error as exc:
-                print ("Caught exception socket.error : %s" % exc)
+                self.print_info("Caught exception socket.error : %s" % exc)
+
+    def _on_response(self, response):
+        self.response_handler_lock.acquire()
+        try:
+            self.print_info("[tello] OnResponse: " + response)
+            if self.response_handler is not None:
+                self.response_handler(response)
+        finally:
+            self.response_handler_lock.release()
+
+    def _set_response_handler(self, response_handler):
+        self.response_handler_lock.acquire()
+        try:
+            self.response_handler = response_handler
+        finally:
+            self.response_handler_lock.release()
+
 
     def _receive_video_thread(self):
         """
@@ -129,7 +167,7 @@ class Tello:
                     packet_data = ""
 
             except socket.error as exc:
-                print ("Caught exception socket.error : %s" % exc)
+                self.print_info ("Caught exception socket.error : %s" % exc)
 
     def _recevie_state_thread(self):
         while True:
@@ -137,9 +175,9 @@ class Tello:
                 state, ip = self.socket_state.recvfrom(1024)
                 out = state.replace(';', ';\n')
                 self.results = out.split()
-                #print(self.response)
+                # self.print_info(self.response)
             except socket.error as exc:
-                print ("Caught exception socket.error : %s" % exc)
+                self.print_info ("Caught exception socket.error : %s" % exc)
 
     def _h264_decode(self, packet_data):
         """
@@ -154,7 +192,7 @@ class Tello:
         for framedata in frames:
             (frame, w, h, ls) = framedata
             if frame is not None:
-                # print 'frame size %i bytes, w %i, h %i, linesize %i' % (len(frame), w, h, ls)
+                # self.print_info 'frame size %i bytes, w %i, h %i, linesize %i' % (len(frame), w, h, ls)
 
                 frame = np.fromstring(frame, dtype=np.ubyte, count=len(frame), sep='')
                 frame = (frame.reshape((h, ls / 3, 3)))
@@ -171,38 +209,47 @@ class Tello:
         :return (str): Response from Tello.
 
         """
-        self.log.append(Stats(command, len(self.log)))
-        print (">> send cmd: {}".format(command))
-        #self.abort_flag = False
-        #timer = threading.Timer(self.command_timeout, self.set_abort_flag)
+        if self.stop:
+            time.sleep(0.1)
+            return ""
+        self.request_lock.acquire()
+        try:
+            self.log.append(Stats(command, len(self.log)))
+            self.print_info (">> send cmd: {}".format(command))
+            # self.abort_flag = False
+            # timer = threading.Timer(self.command_timeout, self.set_abort_flag)
 
-        self.socket.sendto(command.encode('utf-8'), self.tello_address)
-        start = time.time()
-        while not self.log[-1].got_response():
-            now = time.time()
-            diff = now - start
-            if diff > self.MAX_TIME_OUT:
-                print ("Max timeout exceeded... command %s" % command)
-                # TODO: is timeout considered failure or next command still get executed
-                # now, next one got executed
-                
-        print ("Done!!! sent command: %s to %s" % (command, self.tello_ip))
-        return self.log[-1].got_response()
-        #timer.start()
-        #while self.response is None:
-         #   if self.abort_flag is True:
-          #      break
-        #timer.cancel()
-        
-        #if self.response is None:
-         #   response = 'none_response'
-        #else:
-         #   response = self.response.decode('utf-8')
+            self.socket.sendto(command.encode('utf-8'), self.tello_address)
+            start = time.time()
+            while not self.log[-1].got_response():
+                now = time.time()
+                diff = now - start
+                if diff > self.MAX_TIME_OUT:
+                    self.print_info ("[tello] command timeout: %s" % command)
+                    raise TimeoutException("[tello] command timeout: " + command)
+                    # TODO: is timeout considered failure or next command still get executed
+                    # now, next one got executed
 
-        #self.response = None
+            self.print_info ("Done!!! sent command: %s to %s" % (command, self.tello_ip))
+            return self.log[-1].got_response()
+        finally:
+            self.request_lock.release()
 
-        #return response
-    
+        # timer.start()
+        # while self.response is None:
+        #   if self.abort_flag is True:
+        #      break
+        # timer.cancel()
+
+        # if self.response is None:
+        #   response = 'none_response'
+        # else:
+        #   response = self.response.decode('utf-8')
+
+        # self.response = None
+
+        # return response
+
     def set_abort_flag(self):
         """
         Sets self.abort_flag to True.
@@ -330,7 +377,7 @@ class Tello:
             int: Percent battery life remaining.
 
         """
-        
+
         battery = self.send_command('battery?')
 
         try:
