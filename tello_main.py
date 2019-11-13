@@ -8,7 +8,7 @@ from utils.utils import *
 
 from detect import Detect
 from tello_data import TelloData
-
+import sl4p
 
 def create_system(d, b, a):
     c = np.sin(d + a) * np.sin(b + a) / (np.sin(d + a + b) * np.sin(a))
@@ -63,7 +63,8 @@ def find_red_ball(img):
     dilation = cv2.dilate(dilation, kernel_4, iterations=1)
 
     # 寻找轮廓
-    imgx, contours, hierarchy = cv2.findContours(dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    # imgx,
+    contours, hierarchy = cv2.findContours(dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 
     area = []
     # 找到最大的轮廓
@@ -90,6 +91,8 @@ class TelloMain:
             self.fun = fun
 
     def __init__(self, tello):
+        self.done = False
+        self.logger = sl4p.Sl4p("tello_main", "1;36")
         self.start_time = None
         self.detector = None
         self.tello = tello
@@ -114,23 +117,29 @@ class TelloMain:
     def print_info(self, stage, msg):
         if self.info_idx == 0:
             self.info_idx = 1
-            print("\033[7m\033[32m[tello]\033[7m\033[33m[stage:%s]\033[37;40m %s\033[0m" % (
-                str(stage).ljust(8), msg.ljust(max(30, len(msg) + 2))))
+            self.logger.info("\033[0;7;33m[stage:%s]\033[0m %s\033[0m" % (
+                str(stage), msg.ljust(max(30, len(msg) + 2))))
         else:
             self.info_idx = 0
-            print("\033[7m\033[31m[tello]\033[7m\033[37m[stage:%s]\033[37;40m %s\033[0m" % (
-                str(stage).ljust(8), msg.ljust(max(30, len(msg) + 2))))
+            self.logger.info("\033[0;7;37m[stage:%s]\033[0m %s\033[0m" % (
+                str(stage), msg.ljust(max(30, len(msg) + 2))))
 
-    def on_loop(self, state, img, showimg):
+    def on_loop(self, state, img, showimg, do_draw=True, do_control=True):
         state = TelloData(state)
         if state.mid is not -1:
-            self.latest_state = state
+            if do_control:
+                self.latest_state = state
         if self.stage == -1:
+            if not do_control:
+                return
             if self.takeoff:
                 self.takeoff = False
+                self.done = True
                 self.print_info(1, "land!")
                 self.tello.land()
         elif self.stage == -2:  # mid lost
+            if not do_control:
+                return
             if state.mid is not -1:
                 next_stage = self.fall_back_stage or 2
                 self.print_info("-2 => %d" % next_stage, "mid found, back to stage:%d" % next_stage)
@@ -152,12 +161,16 @@ class TelloMain:
                     self.print_info("-2", "move left to find mid")
                     self.tello.move_left(0.25)
         elif self.stage == 0:
+            if not do_control:
+                return
             if self.initial_done:
                 self.print_info("0 => 1", "initial done")
                 self.stage = 1
             else:
                 return  # 尚未初始化，等待初始化
         elif self.stage == 1:  # 起飞并寻找定位毯
+            if not do_control:
+                return
             if self.takeoff:
                 if state.mid == -1:  # 没有找到定位毯
                     self.print_info(1, "move up 25cm to find mid")
@@ -171,6 +184,8 @@ class TelloMain:
                 self.start_time = time.time()
                 self.takeoff = True
         elif self.stage == 2:  # 调整姿态
+            if not do_control:
+                return
             if state.mid == -1:
                 self.print_info("2 => -2", "mid lost!")
                 self.stage = -2
@@ -191,16 +206,24 @@ class TelloMain:
                     self.stage = 3
         elif self.stage == 3:  # 寻找着火点
             if state.mid == -1:
+                if not do_control:
+                    return
                 self.print_info("3 => -2", "mid lost!")
                 self.stage = -2
                 self.fall_back_stage = 3
             elif state.y < 60:
+                if not do_control:
+                    return
                 self.print_info(3, "move back to map (right)")
                 self.tello.move_right(0.2)
             elif state.x < 40:
+                if not do_control:
+                    return
                 self.print_info(3, "move back to map (forward)")
                 self.tello.move_forward(0.2)
             elif state.x > 70:
+                if not do_control:
+                    return
                 dis = max(min(state.x - 70, 35), 20) / 100.0
                 self.print_info(3, "move back to find red point")
                 self.tello.move_backward(dis)
@@ -209,8 +232,11 @@ class TelloMain:
                 det = 10 / 180.0 * np.pi
                 x, y, w, h = find_red_ball(img)
                 if x is not None:  # 寻找到了着火点
-                    cv2.rectangle(showimg, (x, y), (x + w, y + h), (255, 0, 0), thickness=2)
+                    if do_draw:
+                        cv2.rectangle(showimg, (x, y), (x + w, y + h), (255, 0, 0), thickness=2)
                     if abs(w / float(h) - 1) > 0.3:  # 只找到了部分园，判断在边界，进行调整
+                        if not do_control:
+                            return
                         if 720 - y - h < 20:
                             self.print_info(3, "move down to find full red point")
                             self.tello.move_down(0.2)
@@ -236,16 +262,20 @@ class TelloMain:
                         scale = (ry2 - ry1) / delta
                         ry = (cx - la_x) * pix_size  # (cx - 480) * pix_size
 
-                        cv2.line(showimg, (la_x, la_y), (cx, la_y), (0, 255, 0), thickness=2)
-                        cv2.line(showimg, (cx, la_y), (cx, cy), (0, 255, 0), thickness=2)
-                        s = "y offset: %.2fcm" % ry
-                        cv2.putText(showimg, s, (la_x, la_y), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 0), thickness=5)
-                        cv2.putText(showimg, s, (la_x, la_y), cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), thickness=1)
-                        s = "h offset: %.2fcm" % rh
-                        cv2.putText(showimg, s, (cx, la_y + 20), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 0), thickness=5)
-                        cv2.putText(showimg, s, (cx, la_y + 20), cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255),
-                                    thickness=1)
+                        if do_draw:
+                            cv2.line(showimg, (la_x, la_y), (cx, la_y), (0, 255, 0), thickness=2)
+                            cv2.line(showimg, (cx, la_y), (cx, cy), (0, 255, 0), thickness=2)
+                            s = "y offset: %.2fcm" % ry
+                            cv2.putText(showimg, s, (la_x, la_y), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 0), thickness=5)
+                            cv2.putText(showimg, s, (la_x, la_y), cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255),
+                                        thickness=1)
+                            s = "h offset: %.2fcm" % rh
+                            cv2.putText(showimg, s, (cx, la_y + 20), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 0), thickness=5)
+                            cv2.putText(showimg, s, (cx, la_y + 20), cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255),
+                                        thickness=1)
 
+                        if not do_control:
+                            return
                         if abs(ry) > 10:
                             dis = max(min(abs(ry), 40), 20) / 100.0
                             if ry < 0:
@@ -272,6 +302,8 @@ class TelloMain:
                             self.print_info("stage:3 => 4", "rush done! start detecting balls")
                             self.stage = 4
                 else:  # 没有找到着火点
+                    if not do_control:
+                        return
                     if abs(state.z - 160) > 20:  # 调整高度
                         dis = min(abs(state.z - 160), 40) / 100.0
                         self.print_info(3, "adjust height to 160 to find red point")
@@ -297,6 +329,8 @@ class TelloMain:
                         self.stage = -1
                         self.print_info("3 => -1", "failed to find red point")
         elif self.stage == 4:
+            if not do_control:
+                return
             result = self.detector.detect_ball(img)
             detected = False
             if len(result) > 0:
@@ -327,5 +361,7 @@ class TelloMain:
                     self.print_info(4, "random move to find balls (right = %d)" % dis)
                     self.tello.move_right(dis / 100.0)
         else:
+            if not do_control:
+                return
             self.print_info("%d => -1" % self.stage, "unknown stage")
             self.stage = -1

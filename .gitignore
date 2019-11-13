@@ -2,3 +2,7 @@
 libh264decoder.so
 *.pyc
 __pycache__
+weights
+.idea
+*.png
+*.jpg
