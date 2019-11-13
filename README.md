@@ -15,7 +15,12 @@ python tello_wrap.py
 即可  
 __Ctrl+C__ 终止后会自动降落
 
-
+## 调试
+通过指定:
+```python
+drone.stop = True
+```
+就可以让所有传到drone里的指令都不会实际生效，可以通过这个来手动移动无人机来进行测试。
 
 
 
