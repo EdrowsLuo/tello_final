@@ -12,8 +12,8 @@ python tello_state.py （直接从原版进行修改的，比较乱，而且图�
 ```cmd
 python tello_wrap.py
 ```
-即可
-Ctrl+C终止后会自动降落
+即可  
+__Ctrl+C__ 终止后会自动降落
 
 
 
