@@ -63,8 +63,13 @@ def find_red_ball(img):
     dilation = cv2.dilate(dilation, kernel_4, iterations=1)
 
     # 寻找轮廓
-    imgx,\
-    contours, hierarchy = cv2.findContours(dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    v = cv2.findContours(dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    if len(v) == 2:
+        contours, hierarchy = v
+    elif len(v) == 3:
+        _, contours, hierarchy = v
+    else:
+        return None, None, None, None
 
     area = []
     # 找到最大的轮廓
@@ -442,3 +447,7 @@ class TelloMain:
                 return
             self.print_info("%d => -1" % self.stage, "unknown stage")
             self.stage = -1
+
+
+if __name__ == '__main__':
+    print (find_red_ball(cv2.imread("./camera_screenshot_10.11.2019.png")))
