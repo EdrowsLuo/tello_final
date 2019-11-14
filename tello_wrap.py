@@ -67,7 +67,7 @@ class TelloWrap:
         # type: () -> (str, object)
         self.update_lock.acquire()
         try:
-            self.tello_state = "mid:1;x:50;y:80;z:-160;mpry:0,0,0;"
+            # self.tello_state = "mid:1;x:50;y:80;z:-160;mpry:0,0,0;"
             return self.tello_state, self.img
         finally:
             self.update_lock.release()
@@ -104,7 +104,7 @@ if __name__ == '__main__':
     drone = tello.Tello('', 8888)
     drone.do_print_info = True
     drone.filter = filter_msg
-    drone.stop = True
+    # drone.stop = True
     telloMain = TelloMain(drone)
     telloWrap = TelloWrap(telloMain, drone)
     telloWrap.main_loop()

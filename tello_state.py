@@ -26,7 +26,7 @@ if __name__ == '__main__':
     telloMain = TelloMain(drone)
     telloMain.initial()
 
-    drone.stop = True
+    # drone.stop = True
     try:
         while True:
 
@@ -48,6 +48,7 @@ if __name__ == '__main__':
 
             try:
                 telloMain.on_loop(tello_state, img, showimg)
+                pass
             except tello.TimeoutException:
                 pass
 
@@ -55,5 +56,8 @@ if __name__ == '__main__':
             cv2.waitKey(1)
     except KeyboardInterrupt:
         telloMain.print_info("outer", "KeyboardInterrupt(land)")
+        drone.land()
+    except tello.TimeoutException:
+        telloMain.print_info("outer", "TimeoutException(land)")
         drone.land()
 
