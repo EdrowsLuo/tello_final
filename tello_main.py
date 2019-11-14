@@ -1,5 +1,9 @@
 # coding=utf-8
 import time
+
+from numpy.core._multiarray_umath import ndarray
+from typing import List
+
 from utils.utils import *
 
 from detect import Detect
@@ -67,21 +71,25 @@ def find_red_ball(img):
     else:
         return None, None, None, None
 
-    area = []
+    area = []  # type: List[int]
     # 找到最大的轮廓
     for k in range(len(contours)):
         area.append(cv2.contourArea(contours[k]))
     if len(area) == 0:
         return None, None, None, None
-    max_idx = np.argmax(np.array(area))
-
-    if area[max_idx] < 1200:
+    max_idx = int(np.argmax(np.array(area)))
+    # print(contours[max_idx])
+    c = np.mean(contours[max_idx], axis=0)
+    dis = np.empty(shape=len(contours[max_idx]))
+    for i in range(len(dis)):
+        dis[i] = np.linalg.norm(c[0] - contours[max_idx][i])
+    # print(np.std(dis))
+    if area[max_idx] < 300 or np.std(dis) > 5:
         return None, None, None, None
-
     x, y, w, h = cv2.boundingRect(contours[max_idx])
-    rate = area[max_idx] / (w * h)
-    if rate < 0.4 or abs(w / float(h) - 1) > 0.7:
-        return None, None, None, None
+    # rate = area[max_idx] / (w * h)
+    # if rate < 0.4 or abs(w / float(h) - 1) > 0.7:
+    #    return None, None, None, None
     return x, y, w, h
 
 
@@ -446,4 +454,14 @@ class TelloMain:
 
 
 if __name__ == '__main__':
-    print (find_red_ball(cv2.imread("./camera_screenshot_10.11.2019.png")))
+    path = ["./rb1.png", "./rb2.png", "./rb3.png", "./rb4.png", "./1.png", "./2.png", "./3.png", "./4.png", "./5.png"]
+    for p in path:
+        img = cv2.imread(p)
+        x, y, w, h = find_red_ball(img)
+        if x is None:
+            print("%s not passed" % p)
+            continue
+        print("(%d %d %d %d)" % (x, y, w, h))
+        cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), thickness=2)
+        cv2.imshow("show", img)
+        cv2.waitKey(0)
