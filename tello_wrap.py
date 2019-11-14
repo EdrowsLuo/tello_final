@@ -3,11 +3,12 @@ import time
 
 import cv2
 import numpy as np
+
+import sl4p
 import tello_base as tello
 from tello_base import Tello
-from tello_data import TelloData
 from tello_main import TelloMain
-import sl4p
+
 
 class TelloWrap:
     def __init__(self, main, drone):

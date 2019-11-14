@@ -5,10 +5,6 @@ import cv2
 import tello_base as tello
 from tello_main import TelloMain
 
-z2 = -180
-z1 = -148
-z0 = -140
-
 
 def filter_msg(msg):
     if "ok" in msg or "Done" in msg:

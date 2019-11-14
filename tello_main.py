@@ -1,9 +1,5 @@
 # coding=utf-8
-import random
 import time
-
-import cv2
-import numpy as np
 from utils.utils import *
 
 from detect import Detect
