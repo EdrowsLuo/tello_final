@@ -359,16 +359,16 @@ class TelloMain:
                     self.stage = -1
                     return
                 else:
-                    if self.current_search_times >= 5:
+                    if self.current_search_times >= 4:
                         self.current_search_times = 0
                         self.print_info("3", "to new target height %d" % self.target_height.pop())
                         return
                     else:
                         self.current_search_times += 1
-                if abs(state.z - 160) > 20:  # 调整高度
-                    dis = min(abs(state.z - 160), 40) / 100.0
+                if abs(state.z - self.target_height) > 15:  # 调整高度
+                    dis = min(abs(state.z - self.target_height), 30) / 100.0
                     self.print_info(3, "adjust height to 160 to find red point")
-                    if state.z > 160:
+                    if state.z > self.target_height:
                         self.tello.move_down(dis)
                     else:
                         self.tello.move_up(dis)
