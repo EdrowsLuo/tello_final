@@ -186,21 +186,21 @@ class TelloMain:
                 self.print_info(1, "move up 25cm to find mid")
                 self.tello.move_up(0.25)
             else:  # 找到了定位毯
-                if state.y > 140 or state.y < 60:
+                if state.y > 120 or state.y < 80:
                     self.print_info("1", "move into map (y)")
-                    if state.y > 140:
+                    if state.y > 120:
                         dis = max(21, state.z - 100) / 100.0
                         self.tello.move_left(dis)
-                    elif state.y < 60:
+                    elif state.y < 80:
                         dis = max(21, 100 - state.z) / 100.0
                         self.tello.move_right(dis)
                     return
-                elif state.x > 140 or state.x < 60:
+                elif state.x > 120 or state.x < 80:
                     self.print_info("1", "move into map (x)")
-                    if state.x > 140:
+                    if state.x > 120:
                         dis = max(21, state.x - 100) / 100.0
                         self.tello.move_backward(dis)
-                    elif state.x < 60:
+                    elif state.x < 80:
                         dis = max(21, 100 - state.x) / 100.0
                         self.tello.move_forward(dis)
                     return
