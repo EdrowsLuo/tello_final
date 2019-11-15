@@ -78,18 +78,13 @@ def find_red_ball(img):
     if len(area) == 0:
         return None, None, None, None
     max_idx = int(np.argmax(np.array(area)))
-    # print(contours[max_idx])
     c = np.mean(contours[max_idx], axis=0)
     dis = np.empty(shape=len(contours[max_idx]))
     for i in range(len(dis)):
         dis[i] = np.linalg.norm(c[0] - contours[max_idx][i])
-    # print(np.std(dis))
     if area[max_idx] < 300 or np.std(dis) > 5:
         return None, None, None, None
     x, y, w, h = cv2.boundingRect(contours[max_idx])
-    # rate = area[max_idx] / (w * h)
-    # if rate < 0.4 or abs(w / float(h) - 1) > 0.7:
-    #    return None, None, None, None
     return x - 4, y - 4, w + 2, h + 2
 
 
@@ -252,16 +247,16 @@ class TelloMain:
             if not do_control:
                 return
             self.print_info(3, "move back to map (right)")
-            self.tello.move_right(0.2)
-        elif state.x < 40:
+            self.tello.move_right(0.25)
+        elif state.x < 60:
             if not do_control:
                 return
             self.print_info(3, "move back to map (forward)")
-            self.tello.move_forward(0.2)
-        elif state.x > 60:
+            self.tello.move_forward(0.25)
+        elif state.x > 80:
             if not do_control:
                 return
-            dis = max(min(state.x - 60, 35), 21) / 100.0
+            dis = max(min(state.x - 80, 35), 21) / 100.0
             self.print_info(3, "move back to find red point")
             self.tello.move_backward(dis)
         else:
@@ -313,22 +308,8 @@ class TelloMain:
 
                     if not do_control:
                         return
-                    if abs(ry) > 10:
-                        dis = max(min(abs(ry), 40), 21) / 100.0
-                        if ry < 0:
-                            self.print_info(3, "adjust position to rush! (left)")
-                            self.tello.move_left(dis)
-                        else:
-                            self.print_info(3, "adjust position to rush! (right)")
-                            self.tello.move_right(dis)
-                    elif abs(ry) > 7:
-                        if ry < 0:
-                            self.print_info(3, "adjust position to rush! (left)")
-                            self.tello.move_left(0.3)
-                        else:
-                            self.print_info(3, "adjust position to rush! (right)")
-                            self.tello.move_right(0.3)
-                    elif rh > -10:
+
+                    if rh > -10:
                         dis = max(min(abs(rh + 10), 40), 21) / 100.0
                         self.print_info(3, "adjust position to rush! (up)")
                         self.tello.move_up(dis)
@@ -336,6 +317,21 @@ class TelloMain:
                         dis = max(min(abs(rh + 30), 40), 21) / 100.0
                         self.print_info(3, "adjust position to rush! (down)")
                         self.tello.move_down(dis)
+                    elif abs(ry) > 10:
+                        dis = max(min(abs(ry), 40), 21) / 100.0
+                        if ry < 0:
+                            self.print_info(3, "adjust position to rush! (left)")
+                            self.tello.move_left(dis)
+                        else:
+                            self.print_info(3, "adjust position to rush! (right)")
+                            self.tello.move_right(dis)
+                    # elif abs(ry) > 7:
+                    #    if ry < 0:
+                    #        self.print_info(3, "adjust position to rush! (left)")
+                    #        self.tello.move_left(0.3)
+                    #    else:
+                    #        self.print_info(3, "adjust position to rush! (right)")
+                    #        self.tello.move_right(0.3)
                     else:  # 位置调整已经比较准确，rush
                         dis = ((self.window_x - state.x) + 30) / 100.0  # 估算到墙的距离
                         dis2 = (_dis_y(la_y) + 20) / 100.0
