@@ -115,6 +115,9 @@ class TelloMain:
         self.target_height = [130, 200, 160]
         self.current_search_times = 0
         self.detect_try_times = 0
+        self.showimg = None
+        self.do_save_img = True
+        self.save_idx = 0
 
     def initial(self):
         self.detector = Detect(0.5)
@@ -122,14 +125,20 @@ class TelloMain:
         self.print_info("x => 1", "initial done")
 
     def print_info(self, stage, msg):
-        if self.info_idx == 0:
-            self.info_idx = 1
-            self.logger.info("\033[0;7;33m[stage:%s]\033[0m %s\033[0m" % (
-                str(stage), msg.ljust(max(30, len(msg) + 2))))
-        else:
-            self.info_idx = 0
-            self.logger.info("\033[0;7;37m[stage:%s]\033[0m %s\033[0m" % (
-                str(stage), msg.ljust(max(30, len(msg) + 2))))
+        info = self.logger.info("[stage:%s] %s" % (str(stage), msg))
+        # if self.info_idx == 0:
+        #    self.info_idx = 1
+        #    info = self.logger.info("\033[0;7;33m[stage:%s]\033[0m %s\033[0m" % (
+        #        str(stage), msg.ljust(max(30, len(msg) + 2))))
+        # else:
+        #    self.info_idx = 0
+        #    info = self.logger.info("\033[0;7;37m[stage:%s]\033[0m %s\033[0m" % (
+        #        str(stage), msg.ljust(max(30, len(msg) + 2))))
+        if self.do_save_img:
+            cv2.putText(self.showimg, info, (10, 600), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 0), thickness=5)
+            cv2.putText(self.showimg, info, (10, 600), cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255),
+                        thickness=1)
+            cv2.imwrite("./save/p%d.png" % self.save_idx, self.showimg)
 
     def stage_error_or_finished(self, state, img, showimg, do_draw=True, do_control=True):
         if not do_control:
@@ -288,11 +297,12 @@ class TelloMain:
                     cy = y + h / 2
 
                     rh = _y(la_y) - _y(cy)  # (360 - cy) * pix_size
-                    delta = 20
-                    ry1 = _y(la_y)
-                    ry2 = _y(la_y + delta)
-                    scale = (ry2 - ry1) / delta
+                    # delta = 20
+                    # ry1 = _y(la_y)
+                    # ry2 = _y(la_y + delta)
+                    # scale = (ry2 - ry1) / delta
                     ry = (cx - la_x) * pix_size  # (cx - 480) * pix_size
+                    ry += (self.window_x - state.x) * np.tan(state.mpry[1] / 180.0 * np.pi)
 
                     if do_draw:
                         cv2.line(showimg, (la_x, la_y), (cx, la_y), (0, 255, 0), thickness=2)
@@ -334,7 +344,7 @@ class TelloMain:
                     #        self.tello.move_right(0.3)
                     else:  # 位置调整已经比较准确，rush
                         dis = ((self.window_x - state.x) + 30) / 100.0  # 估算到墙的距离
-                        dis2 = (_dis_y(la_y) + 20) / 100.0
+                        dis2 = (_dis_y(la_y) + 30) / 100.0
                         cv2.imshow("rush", showimg)
                         cv2.waitKey(1)
                         self.print_info(3, "rush %.2fm! (%.2f, %.2f)" % (dis, dis2, dis - dis2))
@@ -446,6 +456,7 @@ class TelloMain:
 
     def on_loop(self, state, img, showimg, do_draw=True, do_control=True):
         state = TelloData(state)
+        self.showimg = showimg
         if state.mid is not -1:
             if do_control:
                 self.latest_state = state

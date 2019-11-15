@@ -28,17 +28,19 @@ class Sl4p:
         }
 
     def info(self, msg):
-        self._print(LOG_LEVEL_INFO, msg)
+        return self._print(LOG_LEVEL_INFO, msg)
 
     def error(self, msg):
-        self._print(LOG_LEVEL_ERROR, msg)
+        return self._print(LOG_LEVEL_ERROR, msg)
 
     def _print(self, level, msg):
         if self.log_level <= level:
-            msg = str(msg)
             print("\033[0;%sm[%s]\033[0;%sm[%s]\033[0;%sm %s\033[0m" %
                   (self.style or "0", self.name, self.LOG_LEVEL_STYLE[level],
-                   self.LEVEL_NAME_DIC[level], self.LOG_LEVEL_MSG_STYLE[level], msg))
+                   self.LEVEL_NAME_DIC[level], self.LOG_LEVEL_MSG_STYLE[level], str(msg)))
+            return "[%s][%s] %s" % \
+                  (self.name,
+                   self.LEVEL_NAME_DIC[level], msg)
 
 
 if __name__ == '__main__':

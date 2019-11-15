@@ -3,6 +3,7 @@
 import numpy as np
 import cv2
 import tello_base as tello
+import view_saved_img
 from tello_main import TelloMain
 
 
@@ -56,4 +57,5 @@ if __name__ == '__main__':
     except tello.TimeoutException:
         telloMain.print_info("outer", "TimeoutException(land)")
         drone.land()
+    view_saved_img.display_saved_imgs()
 
