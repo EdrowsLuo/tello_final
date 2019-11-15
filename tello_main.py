@@ -90,7 +90,7 @@ def find_red_ball(img):
     # rate = area[max_idx] / (w * h)
     # if rate < 0.4 or abs(w / float(h) - 1) > 0.7:
     #    return None, None, None, None
-    return x, y, w, h
+    return x - 4, y - 4, w + 2, h + 2
 
 
 class TelloMain:
@@ -483,6 +483,6 @@ if __name__ == '__main__':
             print("%s not passed" % p)
             continue
         print("(%d %d %d %d)" % (x, y, w, h))
-        cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), thickness=2)
+        cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), thickness=1)
         cv2.imshow("show", img)
         cv2.waitKey(0)
