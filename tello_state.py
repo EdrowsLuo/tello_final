@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import cv2
+
+import sl4p
 import tello_base as tello
 import view_saved_img
 from tello_main import TelloMain
@@ -15,15 +17,17 @@ def filter_msg(msg):
 
 
 if __name__ == '__main__':
-    drone = tello.Tello('', 8888)
+    logger = sl4p.Sl4p("__main__", "1")
 
+    drone = tello.Tello('', 8888)
     drone.do_print_info = True
     drone.filter = filter_msg
-    print("start")
+    # drone.stop = True
+    logger.info("start")
+
     telloMain = TelloMain(drone)
     telloMain.initial()
 
-    # drone.stop = True
     try:
         while True:
 
@@ -52,10 +56,10 @@ if __name__ == '__main__':
             cv2.imshow("camera", showimg)
             cv2.waitKey(1)
     except KeyboardInterrupt:
-        telloMain.print_info("outer", "KeyboardInterrupt(land)")
+        logger.info("KeyboardInterrupt(land)")
         drone.land()
     except tello.TimeoutException:
-        telloMain.print_info("outer", "TimeoutException(land)")
+        logger.error("TimeoutException(land)")
         drone.land()
     # view_saved_img.display_saved_imgs()
 

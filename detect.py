@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import time
 from sys import platform
+
+import sl4p
 from models import *
 import threading
 
@@ -183,15 +185,15 @@ class Detect:
 
 
 if __name__ == '__main__':
-
+    logger = sl4p.Sl4p("__main__", "1")
     img = cv2.imread('data/samples/7.jpg')
-    print("start")
+    logger.info("start")
     detector = Detect(0.1)
     start = time.time()
-    print("start detect")
+    logger.info("start detect")
     result_obj = detector.detect_ball(img)
     end = time.time()
-    print("time: " + str(end - start) + "s")
+    logger.info("time: " + str(end - start) + "s")
     for r in result_obj:
-        print(str(r))
+        logger.info(str(r))
 

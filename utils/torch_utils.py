@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
+import sl4p
 
+torch_logger = sl4p.Sl4p("torch", "1;33")
 
 def init_seeds(seed=0):
     torch.cuda.empty_cache()
@@ -16,7 +18,7 @@ def select_device(force_cpu=False, apex=False):
     device = torch.device('cuda:0' if cuda else 'cpu')
 
     if not cuda:
-        print('Using CPU')
+        torch_logger.info('Using CPU')
     if cuda:
         torch.backends.cudnn.benchmark = True  # set False for reproducible results
         c = 1024 ** 2  # bytes to MB
@@ -27,10 +29,10 @@ def select_device(force_cpu=False, apex=False):
             if i == 1:
                 # torch.cuda.set_device(0)  # OPTIONAL: Set GPU ID
                 cuda_str = ' ' * len(cuda_str)
-            print("%sdevice%g _CudaDeviceProperties(name='%s', total_memory=%dMB)" %
+            torch_logger.info("%sdevice%g _CudaDeviceProperties(name='%s', total_memory=%dMB)" %
                   (cuda_str, i, x[i].name, x[i].total_memory / c))
 
-    print('')  # skip a line
+    # torch_logger.info('')  # skip a line
     return device
 
 

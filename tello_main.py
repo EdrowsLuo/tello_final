@@ -120,9 +120,10 @@ class TelloMain:
         self.save_idx = 0
 
     def initial(self):
+        self.print_info("x", "start initial")
         self.detector = Detect(0.5)
         self.initial_done = True
-        self.print_info("x => 1", "initial done")
+        self.print_info("x => 0", "initial done")
 
     def print_info(self, stage, msg):
         info = self.logger.info("[stage:%s] %s" % (str(stage), msg))
@@ -178,7 +179,7 @@ class TelloMain:
         if not do_control:
             return
         if self.initial_done:
-            self.print_info("0 => 1", "initial done")
+            self.print_info("0 => 1", "start")
             self.stage = 1
         else:
             return  # 尚未初始化，等待初始化

@@ -29,7 +29,7 @@ class Tello:
         :param tello_ip (str): Tello IP.
         :param tello_port (int): Tello port.
         """
-        self.logger = sl4p.Sl4p("base", "1;33")
+        self.logger = sl4p.Sl4p("tello_base", "1;33")
         self.do_print_info = True
         self.filter = None
         self.request_lock = threading.Lock()
