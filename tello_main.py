@@ -82,10 +82,10 @@ def find_red_ball(img):
     dis = np.empty(shape=len(contours[max_idx]))
     for i in range(len(dis)):
         dis[i] = np.linalg.norm(c[0] - contours[max_idx][i])
-    if area[max_idx] < 300 or np.std(dis) > 5:
+    if area[max_idx] < 1000 or np.std(dis) > 5:
         return None, None, None, None
     x, y, w, h = cv2.boundingRect(contours[max_idx])
-    return x - 4, y - 4, w + 2, h + 2
+    return x, y, w, h
 
 
 class TelloMain:
@@ -134,11 +134,12 @@ class TelloMain:
         #    self.info_idx = 0
         #    info = self.logger.info("\033[0;7;37m[stage:%s]\033[0m %s\033[0m" % (
         #        str(stage), msg.ljust(max(30, len(msg) + 2))))
-        if self.do_save_img:
+        if self.do_save_img and self.showimg is not None:
             cv2.putText(self.showimg, info, (10, 600), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 0), thickness=5)
             cv2.putText(self.showimg, info, (10, 600), cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255),
                         thickness=1)
             cv2.imwrite("./save/p%d.png" % self.save_idx, self.showimg)
+            self.save_idx += 1
 
     def stage_error_or_finished(self, state, img, showimg, do_draw=True, do_control=True):
         if not do_control:
@@ -190,22 +191,22 @@ class TelloMain:
                 self.print_info(1, "move up 25cm to find mid")
                 self.tello.move_up(0.25)
             else:  # 找到了定位毯
-                if state.y > 120 or state.y < 80:
+                if state.y > 130 or state.y < 70:
                     self.print_info("1", "move into map (y)")
-                    if state.y > 120:
-                        dis = max(21, state.z - 100) / 100.0
+                    if state.y > 130:
+                        dis = min(max(21, state.z - 100), 40) / 100.0
                         self.tello.move_left(dis)
-                    elif state.y < 80:
-                        dis = max(21, 100 - state.z) / 100.0
+                    elif state.y < 70:
+                        dis = min(max(21, 100 - state.z), 40) / 100.0
                         self.tello.move_right(dis)
                     return
-                elif state.x > 120 or state.x < 80:
+                elif state.x > 130 or state.x < 70:
                     self.print_info("1", "move into map (x)")
-                    if state.x > 120:
-                        dis = max(21, state.x - 100) / 100.0
+                    if state.x > 130:
+                        dis = min(max(21, state.x - 100), 40) / 100.0
                         self.tello.move_backward(dis)
-                    elif state.x < 80:
-                        dis = max(21, 100 - state.x) / 100.0
+                    elif state.x < 70:
+                        dis = min(max(21, 100 - state.x), 40) / 100.0
                         self.tello.move_forward(dis)
                     return
                 else:
@@ -220,6 +221,7 @@ class TelloMain:
         else:
             self.print_info(1, "takeoff")
             self.tello.takeoff()
+            self.tello.move_up(0.3)
             self.start_time = time.time()
             self.takeoff = True
 
@@ -252,22 +254,6 @@ class TelloMain:
             self.print_info("3 => 1", "mid lost!")
             self.stage = 1
             self.fall_back_stage = 3
-        elif state.y < 60:
-            if not do_control:
-                return
-            self.print_info(3, "move back to map (right)")
-            self.tello.move_right(0.25)
-        elif state.x < 60:
-            if not do_control:
-                return
-            self.print_info(3, "move back to map (forward)")
-            self.tello.move_forward(0.25)
-        elif state.x > 80:
-            if not do_control:
-                return
-            dis = max(min(state.x - 80, 35), 21) / 100.0
-            self.print_info(3, "move back to find red point")
-            self.tello.move_backward(dis)
         else:
             view = 45 / 180.0 * np.pi
             det = 10 / 180.0 * np.pi
@@ -320,11 +306,11 @@ class TelloMain:
                         return
 
                     if rh > -10:
-                        dis = max(min(abs(rh + 10), 40), 21) / 100.0
+                        dis = max(min(abs(rh + 10), 40), 20) / 100.0
                         self.print_info(3, "adjust position to rush! (up)")
                         self.tello.move_up(dis)
                     elif rh < -20:
-                        dis = max(min(abs(rh + 30), 40), 21) / 100.0
+                        dis = max(min(abs(rh + 20), 40), 25) / 100.0
                         self.print_info(3, "adjust position to rush! (down)")
                         self.tello.move_down(dis)
                     elif abs(ry) > 10:
@@ -343,7 +329,7 @@ class TelloMain:
                     #        self.print_info(3, "adjust position to rush! (right)")
                     #        self.tello.move_right(0.3)
                     else:  # 位置调整已经比较准确，rush
-                        dis = ((self.window_x - state.x) + 30) / 100.0  # 估算到墙的距离
+                        dis = ((self.window_x - state.x) + 20) / 100.0  # 估算到墙的距离
                         dis2 = (_dis_y(la_y) + 30) / 100.0
                         cv2.imshow("rush", showimg)
                         cv2.waitKey(1)
@@ -354,21 +340,39 @@ class TelloMain:
             else:  # 没有找到着火点
                 if not do_control:
                     return
-                if len(self.target_height) == 0:
+                if len(self.target_height) == 1:
                     self.print_info("3 => -1", "no more target height!")
                     self.stage = -1
                     return
                 else:
                     if self.current_search_times >= 4:
                         self.current_search_times = 0
-                        self.print_info("3", "to new target height %d" % self.target_height.pop())
+                        self.target_height.pop()
+                        self.print_info("3", "to new target height %d" % self.target_height[-1])
                         return
                     else:
                         self.current_search_times += 1
-                if abs(state.z - self.target_height) > 15:  # 调整高度
-                    dis = min(abs(state.z - self.target_height), 30) / 100.0
+
+                if state.y < 60:
+                    if not do_control:
+                        return
+                    self.print_info(3, "move back to map (right)")
+                    self.tello.move_right(0.25)
+                elif state.x < 60:
+                    if not do_control:
+                        return
+                    self.print_info(3, "move back to map (forward)")
+                    self.tello.move_forward(0.25)
+                elif state.x > 75:
+                    if not do_control:
+                        return
+                    dis = max(min(state.x - 75, 35), 21) / 100.0
+                    self.print_info(3, "move back to find red point")
+                    self.tello.move_backward(dis)
+                elif abs(state.z - self.target_height[-1]) > 20:  # 调整高度
+                    dis = min(abs(state.z - self.target_height[-1]), 40) / 100.0
                     self.print_info(3, "adjust height to 160 to find red point")
-                    if state.z > self.target_height:
+                    if state.z > self.target_height[-1]:
                         self.tello.move_down(dis)
                     else:
                         self.tello.move_up(dis)

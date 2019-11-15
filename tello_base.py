@@ -6,6 +6,8 @@ import libh264decoder
 
 import sl4p
 from stats import Stats
+from tello_data import TelloData
+
 
 class TimeoutException(Exception):
     def __init__(self, msg):
@@ -27,7 +29,7 @@ class Tello:
         :param tello_ip (str): Tello IP.
         :param tello_port (int): Tello port.
         """
-        self.logger = sl4p.Sl4p("base", "33")
+        self.logger = sl4p.Sl4p("base", "1;33")
         self.do_print_info = True
         self.filter = None
         self.request_lock = threading.Lock()
@@ -83,6 +85,7 @@ class Tello:
         self.receive_state_thread.start()
 
         self.stop = False
+        self.latest_safe_state = None
 
     def print_info(self, msg):
         if self.do_print_info:
@@ -177,6 +180,10 @@ class Tello:
                 state, ip = self.socket_state.recvfrom(1024)
                 out = state.replace(';', ';\n')
                 self.results = out.split()
+                if not (self.results == 'ok'):
+                    s = TelloData("".join(self.results[0:8]))
+                    if s.mid != -1:
+                        self.latest_safe_state = s
                 # self.print_info(self.response)
             except socket.error as exc:
                 self.logger.error("Caught exception socket.error : %s" % exc)

@@ -57,5 +57,5 @@ if __name__ == '__main__':
     except tello.TimeoutException:
         telloMain.print_info("outer", "TimeoutException(land)")
         drone.land()
-    view_saved_img.display_saved_imgs()
+    # view_saved_img.display_saved_imgs()
 
