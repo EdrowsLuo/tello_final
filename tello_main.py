@@ -88,6 +88,15 @@ def find_red_ball(img):
     return x, y, w, h
 
 
+def info_format(msg, style=True, level=sl4p.LOG_LEVEL_INFO):
+    if level is not sl4p.LOG_LEVEL_INFO:
+        return str(msg)
+    if style:
+        return "\033[0;4;33m[stage:%s]\033[0m %s" % (msg[0], msg[1])
+    else:
+        return "[stage:%s] %s" % (msg[0], msg[1])
+
+
 class TelloMain:
     class Stage:
         def __init__(self, id, fun):
@@ -97,7 +106,7 @@ class TelloMain:
     def __init__(self, tello):
         self.done = False
         self.logger = sl4p.Sl4p("tello_main", "1;36")
-        self.logger.msg_to_str = sl4p.Sl4p.MessageToStr(self.info_format)
+        self.logger.msg_to_str = sl4p.Sl4p.MessageToStr(info_format)
         self.start_time = None
         self.detector = None
         self.tello = tello
@@ -125,14 +134,6 @@ class TelloMain:
         self.detector = Detect(0.5)
         self.initial_done = True
         self.print_info("x => 0", "initial done")
-
-    def info_format(self, msg, style=True, level=sl4p.LOG_LEVEL_INFO):
-        if level is not sl4p.LOG_LEVEL_INFO:
-            return str(msg)
-        if style:
-            return "\033[0;4;33m[stage:%s]\033[0m %s" % (msg[0], msg[1])
-        else:
-            return "[stage:%s] %s" % (msg[0], msg[1])
 
     def print_info(self, stage, msg):
         info = self.logger.info([str(stage), msg])
