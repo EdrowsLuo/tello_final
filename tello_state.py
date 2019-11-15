@@ -8,7 +8,7 @@ from tello_main import TelloMain
 
 
 def filter_msg(msg):
-    if "ok" in msg or "Done" in msg:
+    if "ok" in msg or "Done" in msg or "imu" in msg or "joystick" in msg:
         return False
     else:
         return True

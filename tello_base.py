@@ -3,6 +3,8 @@ import threading
 import time
 import numpy as np
 import libh264decoder
+
+import sl4p
 from stats import Stats
 
 class TimeoutException(Exception):
@@ -25,7 +27,7 @@ class Tello:
         :param tello_ip (str): Tello IP.
         :param tello_port (int): Tello port.
         """
-
+        self.logger = sl4p.Sl4p("base", "33")
         self.do_print_info = True
         self.filter = None
         self.request_lock = threading.Lock()
@@ -62,9 +64,9 @@ class Tello:
 
         # to receive video -- send cmd: command, streamon
         self.socket.sendto(b'command', self.tello_address)
-        print ('sent: command')
+        self.logger.info('into command mode')
         self.socket.sendto(b'streamon', self.tello_address)
-        print ('sent: streamon')
+        self.logger.info('open video stream')
 
         self.socket_video.bind((local_ip, self.local_video_port))
 
@@ -86,7 +88,7 @@ class Tello:
         if self.do_print_info:
             if self.filter is not None and not self.filter(msg):
                 return
-            print ("\033[33m[base]\033[0m %s" % msg)
+            self.logger.info(msg)
 
     def __del__(self):
         """Closes the local socket."""
@@ -134,7 +136,7 @@ class Tello:
     def _on_response(self, response):
         self.response_handler_lock.acquire()
         try:
-            self.print_info("[tello] OnResponse: " + response)
+            self.print_info("OnResponse: " + response)
             if self.response_handler is not None:
                 self.response_handler(response)
         finally:
@@ -167,7 +169,7 @@ class Tello:
                     packet_data = ""
 
             except socket.error as exc:
-                self.print_info ("Caught exception socket.error : %s" % exc)
+                self.logger.error("Caught exception socket.error : %s" % exc)
 
     def _recevie_state_thread(self):
         while True:
@@ -177,7 +179,7 @@ class Tello:
                 self.results = out.split()
                 # self.print_info(self.response)
             except socket.error as exc:
-                self.print_info ("Caught exception socket.error : %s" % exc)
+                self.logger.error("Caught exception socket.error : %s" % exc)
 
     def _h264_decode(self, packet_data):
         """
@@ -215,7 +217,7 @@ class Tello:
         self.request_lock.acquire()
         try:
             self.log.append(Stats(command, len(self.log)))
-            self.print_info (">> send cmd: {}".format(command))
+            self.print_info("command: %s" % str(command))
             # self.abort_flag = False
             # timer = threading.Timer(self.command_timeout, self.set_abort_flag)
 
@@ -225,12 +227,10 @@ class Tello:
                 now = time.time()
                 diff = now - start
                 if diff > self.MAX_TIME_OUT:
-                    self.print_info ("[tello] command timeout: %s" % command)
+                    self.logger.error("timeout: %s" % command)
                     raise TimeoutException("[tello] command timeout: " + command)
-                    # TODO: is timeout considered failure or next command still get executed
-                    # now, next one got executed
 
-            self.print_info ("Done!!! sent command: %s to %s" % (command, self.tello_ip))
+            self.print_info("Done!!! sent command: %s to %s" % (command, self.tello_ip))
             return self.log[-1].got_response()
         finally:
             self.request_lock.release()
