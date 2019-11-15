@@ -12,6 +12,7 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 
+import sl4p
 from . import torch_utils  # , google_utils
 
 matplotlib.rc('font', **{'size': 11})
@@ -23,6 +24,7 @@ np.set_printoptions(linewidth=320, formatter={'float_kind': '{:11.5g}'.format}) 
 # Prevent OpenCV from multithreading (to use PyTorch DataLoader)
 cv2.setNumThreads(0)
 
+utils_logger = sl4p.Sl4p("utils", "1;36")
 
 def floatn(x, n=3):  # format floats to n decimals
     return float(format(x, '.%gf' % n))
@@ -46,12 +48,12 @@ def model_info(model, report='summary'):
     n_p = sum(x.numel() for x in model.parameters())  # number parameters
     n_g = sum(x.numel() for x in model.parameters() if x.requires_grad)  # number gradients
     if report is 'full':
-        print('%5s %40s %9s %12s %20s %10s %10s' % ('layer', 'name', 'gradient', 'parameters', 'shape', 'mu', 'sigma'))
+        utils_logger.info('%5s %40s %9s %12s %20s %10s %10s' % ('layer', 'name', 'gradient', 'parameters', 'shape', 'mu', 'sigma'))
         for i, (name, p) in enumerate(model.named_parameters()):
             name = name.replace('module_list.', '')
-            print('%5g %40s %9s %12g %20s %10.3g %10.3g' %
+            utils_logger.info('%5g %40s %9s %12g %20s %10.3g %10.3g' %
                   (i, name, p.requires_grad, p.numel(), list(p.shape), p.mean(), p.std()))
-    print('Model Summary: %g layers, %g parameters, %g gradients' % (len(list(model.parameters())), n_p, n_g))
+    utils_logger.info('Model Summary: %g layers, %g parameters, %g gradients' % (len(list(model.parameters())), n_p, n_g))
 
 
 def labels_to_class_weights(labels, nc=80):
@@ -138,7 +140,7 @@ def scale_coords(img1_shape, coords, img0_shape):
     coords[:, [0, 2]] -= (img1_shape[1] - img0_shape[1] * gain) / 2  # x padding
     coords[:, [1, 3]] -= (img1_shape[0] - img0_shape[0] * gain) / 2  # y padding
     coords[:, :4] /= gain
-    # print( (gain,coords ) )
+    # utils_logger.info()( (gain,coords ) )
     clip_coords(coords, img0_shape)
     return coords
 
@@ -566,7 +568,7 @@ def coco_class_count(path='../coco/labels/train2014/'):
     for i, file in enumerate(files):
         labels = np.loadtxt(file, dtype=np.float32).reshape(-1, 5)
         x += np.bincount(labels[:, 0].astype('int32'), minlength=nc)
-        print(i, len(files))
+        utils_logger.info(i, len(files))
 
 
 def coco_only_people(path='../coco/labels/val2014/'):
@@ -575,7 +577,7 @@ def coco_only_people(path='../coco/labels/val2014/'):
     for i, file in enumerate(files):
         labels = np.loadtxt(file, dtype=np.float32).reshape(-1, 5)
         if all(labels[:, 0] == 0):
-            print(labels.shape[0], file)
+            utils_logger.info(labels.shape[0], file)
 
 
 def select_best_evolve(path='evolve*.txt'):  # from utils.utils import *; select_best_evolve()
@@ -583,7 +585,7 @@ def select_best_evolve(path='evolve*.txt'):  # from utils.utils import *; select
     for file in sorted(glob.glob(path)):
         x = np.loadtxt(file, dtype=np.float32)
         fitness = x[:, 2] * 0.5 + x[:, 3] * 0.5  # weighted mAP and F1 combination
-        print(file, x[fitness.argmax()])
+        utils_logger.info(file, x[fitness.argmax()])
 
 
 def coco_single_class_labels(path='../coco/labels/train2014/', label_class=43):
@@ -629,13 +631,13 @@ def kmeans_targets(path='../coco/trainvalno5k.txt', n=9, img_size=416):  # from 
     iou = torch.stack([wh_iou(torch.Tensor(wh).T, torch.Tensor(x).T) for x in k], 0)
     biou = iou.max(0)[0]  # closest anchor IoU
 
-    print((biou < 0.2635).float().mean())
+    utils_logger.info((biou < 0.2635).float().mean())
 
     # Print
-    print('kmeans anchors (n=%g, img_size=%g, IoU=%.2f/%.2f/%.2f-min/mean/best): ' %
+    utils_logger.info('kmeans anchors (n=%g, img_size=%g, IoU=%.2f/%.2f/%.2f-min/mean/best): ' %
           (n, img_size, biou.min(), iou.mean(), biou.mean()))
     #for i, x in enumerate(k):
-       # print('%i,%i' % (round(x[0]), round(x[1])) if i < len(k) - 1 else '\n')  # use in *.cfg
+       # utils_logger.info()('%i,%i' % (round(x[0]), round(x[1])) if i < len(k) - 1 else '\n')  # use in *.cfg
 
     # Plot
     # plt.hist(biou.numpy().ravel(), 100)
@@ -646,7 +648,7 @@ def print_mutation(hyp, results, bucket=''):
     a = '%11s' * len(hyp) % tuple(hyp.keys())  # hyperparam keys
     b = '%11.3g' * len(hyp) % tuple(hyp.values())  # hyperparam values
     c = '%11.3g' * len(results) % results  # results (P, R, mAP, F1, test_loss)
-    print('\n%s\n%s\nEvolved fitness: %s\n' % (a, b, c))
+    utils_logger.info('\n%s\n%s\nEvolved fitness: %s\n' % (a, b, c))
 
     if bucket:
         os.system('gsutil cp gs://%s/evolve.txt .' % bucket)  # download evolve.txt
@@ -779,7 +781,7 @@ def plot_evolution_results(hyp):  # from utils.utils import *; plot_evolution_re
         plt.plot(mu, f.max(), 'o', markersize=10)
         plt.plot(y, f, '.')
         plt.title('%s = %.3g' % (k, mu), fontdict={'size': 9})  # limit to 40 characters
-        print('%15s: %.3g' % (k, mu))
+        utils_logger.info('%15s: %.3g' % (k, mu))
     fig.tight_layout()
     plt.savefig('evolve.png', dpi=200)
 

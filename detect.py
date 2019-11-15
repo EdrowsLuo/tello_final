@@ -98,50 +98,11 @@ class Detect:
             # Rescale boxes from 416 to true image size
             det[:, :4] = scale_coords(img.shape[2:], det[:, :4], img0.shape).round()
 
-            """
-            # Print results to screen
-            #print("image_size")
-            #print('%gx%g ' % img.shape[2:])  # print image size
-            for c in det[:, -1].unique():
-                n = (det[:, -1] == c).sum()
-                # print("result")
-                # print('%g %ss' % (n, classes[int(c)]))
-            # Draw bounding boxes and labels of detections
-            for det_pack in det:
-                xyxy = []
-                result_obj=[]
-                for index in range(4):
-                    xyxy.append(det_pack[index])
-                conf = det_pack[4]
-                cls_conf= det_pack[5]
-                cls = det_pack[6]
-                #print((xyxy,conf, cls_conf, cls ))
-                if save_txt:  # Write to file
-                    with open(save_path + '.txt', 'a') as file:
-                        file.write(('%g ' * 6 + '\n') % (xyxy, cls, conf))
-
-                # Add bbox to the image
-                label = '%s %.2f' % (classes[int(cls)], conf)
-                plot_one_box(xyxy, img0, label=label, color=colors[int(cls)])
-                # cv2.imshow('result',img0)
-                # cv2.waitKey(0)
-                if save_images:  # Save image with detections
-                    cv2.imwrite(save_path, img0)
-
-        #print('Done. (%.3fs)' % (time.time() - t0))
-        if save_images:
-            #print('Results saved to %s' % os.getcwd() + os.sep + output)
-            if platform == 'darwin':  # macos
-                os.system('open ' + output + ' ' + save_path)
-        """
-
-        if (det is None):
+        if det is None:
             return []
-        if (det.shape[0] <= 0):
+        if det.shape[0] <= 0:
             return []
         else:
-            # cv2.imwrite('ball_detect.jpg', img0)
-            # cv2.waitKey(3)
             result = []
             for x in range(len(det)):
                 result.append(DetectResult(det[x][0], det[x][1], det[x][2], det[x][3],
