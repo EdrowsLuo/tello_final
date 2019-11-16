@@ -245,7 +245,7 @@ class TelloMain:
             self.stage = 1
             self.fall_back_stage = 2
         else:
-            if abs(state.mpry[1]) > 6:  # 调整位姿
+            if abs(state.mpry[1]) > 5:  # 调整位姿
                 degree = abs(state.mpry[1])
                 degree = min(40, degree)
                 cw = state.mpry[1] < 0
@@ -321,8 +321,8 @@ class TelloMain:
                         dis = max(min(abs(rh + 10), 40), 20) / 100.0
                         self.print_info(3, "adjust position to rush! (up)")
                         self.tello.move_up(dis)
-                    elif rh < -20:
-                        dis = max(min(abs(rh + 20), 40), 25) / 100.0
+                    elif rh < -30:
+                        dis = max(min(abs(rh + 30), 40), 25) / 100.0
                         self.print_info(3, "adjust position to rush! (down)")
                         self.tello.move_down(dis)
                     elif abs(ry) > 10:
@@ -414,6 +414,7 @@ class TelloMain:
             return
         result = self.detector.detect_ball(img)
         detected = False
+        data = None
         if len(result) > 0:
             for ball in result:
                 if "basket" in ball.class_name:
@@ -424,11 +425,17 @@ class TelloMain:
                         label='%s %.2f' % (ball.class_name, ball.object_conf)
                     )
                     detected = True
+                    data = ball
         if detected:
             cv2.imshow("detect", showimg)
             cv2.waitKey(1)
             self.print_info(4, "ball detected")
             # self.tello.move_right(0.5)
+            cx = (data.x1 + data.x2) / 2
+            cy = (data.y1 + data.y2) / 2
+            # if cx > 480:
+            #    self.tello.move_left
+
             if state.mid != -1:
                 if state.z > 100:
                     dis = max(21, state.z - 100) / 100.0
