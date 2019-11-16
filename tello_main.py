@@ -82,6 +82,7 @@ def find_red_ball(img):
     dis = np.empty(shape=len(contours[max_idx]))
     for i in range(len(dis)):
         dis[i] = np.linalg.norm(c[0] - contours[max_idx][i])
+    # print np.std(dis)
     if area[max_idx] < 1000 or np.std(dis) > 5:
         return None, None, None, None
     x, y, w, h = cv2.boundingRect(contours[max_idx])
@@ -92,7 +93,7 @@ def info_format(msg, style=True, level=sl4p.LOG_LEVEL_INFO):
     if level is not sl4p.LOG_LEVEL_INFO:
         return str(msg)
     if style:
-        return "\033[0;4;33m[stage:%s]\033[0m %s" % (msg[0], msg[1])
+        return "\033[0;4;33m[stage:%s]\033[0;1m %s" % (msg[0], msg[1])
     else:
         return "[stage:%s] %s" % (msg[0], msg[1])
 
@@ -351,12 +352,14 @@ class TelloMain:
             else:  # 没有找到着火点
                 if not do_control:
                     return
+                if self.tello.stop:
+                    return
                 if len(self.target_height) == 1:
                     self.print_info("3 => -1", "no more target height!")
                     self.stage = -1
                     return
                 else:
-                    if self.current_search_times >= 4:
+                    if self.current_search_times >= 5:
                         self.current_search_times = 0
                         self.target_height.pop()
                         self.print_info("3", "to new target height %d" % self.target_height[-1])
