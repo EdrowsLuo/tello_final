@@ -3,6 +3,42 @@ import cv2
 import numpy as np
 
 
+def create_system(d, b, a):
+    c = np.sin(d + a) * np.sin(b + a) / (np.sin(d + a + b) * np.sin(a))
+    t = np.sin(a + b) / np.sin(d + a + b)
+    k = np.sin(a + b) / np.sin(b)
+
+    def _y(x):
+        return t * x / (c * (1 - x) + x)
+
+    def _det_y(x):
+        tmp = c * (1 - x) + x
+        return t * c / (tmp * tmp)
+
+    def _dis_y(x):
+        y = _y(x)
+        return np.sqrt(y * y + k * k - 2 * y * k * np.cos(d + a))
+
+    return _y, _dis_y, _det_y
+
+
+def solve_system(d, b, a, x_scale, x1, x2, dis):
+    x_scale = float(x_scale)
+    _y, _dis_y, _det_y = create_system(d, b, a)
+    y1, y2 = _y(x1 / x_scale), _y(x2 / x_scale)
+    scale = dis / abs(y1 - y2)
+
+    def __y(x):
+        return scale * _y(x / x_scale)
+
+    def __dis_y(x):
+        return scale * _dis_y(x / x_scale)
+
+    def __det_y(x):
+        return scale * _det_y(x / x_scale)
+
+    return __y, __dis_y, __det_y
+
 def find_red_ball(img):
     kernel_4 = np.ones((4, 4), np.uint8)  # 4x4的卷积核
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
