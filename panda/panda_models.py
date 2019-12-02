@@ -11,6 +11,7 @@ from panda3d.core import PointLight, AmbientLight
 from panda3d.core import VBase4
 import numpy as np
 import time
+from world.world import *
 
 def nar(d):
     return np.array(d, dtype=np.float64)
@@ -65,6 +66,9 @@ class ModelBox:
 
     def setPos(self, x, y, z):
         self.path.setPos(x, y, z)
+
+    def setDirection(self, h, p, r):
+        self.path.setHpr(h, p, r)
 
 
 class ModelBuilder:
@@ -165,20 +169,39 @@ if __name__ == '__main__':
             self.redBox.setPos(0, 0, 0)
 
             size = nar([25, 25, 0.01])
-            self.floorModel = ModelBox("floorBox", nar([0, 0, -size[2]]), size, (0.9, 0.9, 0.9, 1), self.redBox.path)
+            self.floorModel = ModelBox("floorBox", nar([0, 0, -size[2]]), size, (0.9, 0.9, 0.9, 1), self.render)
+
+            size = nar([25, 0.1, 25])
+            self.wallModel = ModelBox("wall", nar([0, 10, 0]), size, (1, 1, 1, 1), self.render)
+            self.wall = CollideSurface(vec3(0, 10, 0), vec3(25, 0, 0), vec3(0, 0, 25), vec3(0, -1, 0))
+
+            size = nar([0.1, 25, 0.1])
+            self.rayModel = ModelBox("wall", nar([-0.05, 0, -0.05]), size, (1, 0, 0, 1), self.render)
+            self.rayModel.setPos(10, 0, 10)
+
+            size = nar([0.4, 0.4, 0.4])
+            self.pointModel = ModelBox("wall", -size/2, size, (0, 0, 1, 1), self.render)
 
             self.task_mgr.add(self.spinCameraTask, "SpinCameraTask")
 
         # Define a procedure to move the camera.
         def spinCameraTask(self, task):
             angleDegrees = task.time * 30.0
+            ray = nvec3(np.cos(angleDegrees/180), 2, np.sin(angleDegrees/180))
+            point = self.wall.collide_ray(vec3(10, 0, 10), ray)
+            if point is None:
+                self.pointModel.setPos(0, 0, 0)
+            else:
+                self.pointModel.setPos(point[0], point[1], point[2])
+            #self.rayModel.setDirection(10, 0, angleDegrees)
             angleDegrees = -70
             angleRadians = angleDegrees*(pi/180.0)
-            self.camera.setPos(20*sin(angleRadians), -20.0*cos(angleRadians), 3)
+            self.camera.setPos(40*sin(angleRadians), -40.0*cos(angleRadians), 3)
             self.camera.setHpr(angleDegrees, 0, 0)
             self.camera.look_at(0, 0, 3)
             #self.plight.setPos(10*sin(angleRadians), -10.0*cos(angleRadians), 3)
             time.sleep(1.0/90.0)
+
             return Task.cont
 
     m = ModelBuilderTest()

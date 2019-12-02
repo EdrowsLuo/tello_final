@@ -31,9 +31,20 @@ def init_drone():
 
 if __name__ == '__main__':
     myTello = MyTello(init_drone())
+    myTello.wait_until_video_done()
+
+    myTello.drone.takeoff()
+    time.sleep(5)
+    myTello.drone.up(10)
+    time.sleep(3)
+    myTello.drone.up(0)
+
     while True:
+        data = myTello.get_state()
         img = myTello.get_frame()
         if img is not None:
             cv2.imshow("img", img)
             cv2.waitKey(1)
+        if data is not None and data.mid > 0:
+            myTello.drone.clockwise(-data.mpry[1])
         time.sleep(0.018)
