@@ -54,6 +54,7 @@ class MyTello:
 
     def get_state(self):
         # type: () -> TelloData
+        self.state_lock.acquire()
         try:
             return self.tello_data
         finally:

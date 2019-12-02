@@ -5,7 +5,7 @@ import numpy as np
 from image_detecte.redball_detecter import *
 
 from control.tello_abs import MyTello
-import mtellopy
+import mtellopy.tello
 
 def handler(event, sender, data, **args):
     """Drone events handler, for testing.  """
@@ -16,7 +16,7 @@ def handler(event, sender, data, **args):
 
 def init_drone():
     """Drone initiation function for testing.  """
-    drone = mtellopy.Tello()
+    drone = mtellopy.tello.Tello()
 
     try:
         drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
@@ -32,8 +32,10 @@ def init_drone():
 
 if __name__ == '__main__':
     myTello = MyTello(init_drone())
+    myTello.wait_until_video_done()
     while True:
         img = myTello.get_frame()
+        print(myTello.get_state())
         showimg = np.copy(img)
         if img is not None:
             view = 45/180.0*np.pi

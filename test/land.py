@@ -1,10 +1,11 @@
-# coding=utf-8
 import cv2
 import time
-import numpy as np
-from image_detecte.redball_detecter import *
+
 from control.tello_abs import MyTello
+import mtellopy
 import mtellopy.tello
+import threading
+
 
 def handler(event, sender, data, **args):
     """Drone events handler, for testing.  """
@@ -29,11 +30,15 @@ def init_drone():
     return drone
 
 
-if __name__ == '__main__':
-    myTello = MyTello(init_drone())
+def imshow_thread():
     while True:
         img = myTello.get_frame()
         if img is not None:
             cv2.imshow("img", img)
             cv2.waitKey(1)
         time.sleep(0.018)
+
+
+if __name__ == '__main__':
+    myTello = MyTello(init_drone())
+    myTello.drone.land()

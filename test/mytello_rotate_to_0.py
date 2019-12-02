@@ -4,7 +4,7 @@ import time
 import numpy as np
 from image_detecte.redball_detecter import *
 from control.tello_abs import MyTello
-import mtellopy
+import mtellopy.tello
 
 def handler(event, sender, data, **args):
     """Drone events handler, for testing.  """
@@ -15,7 +15,7 @@ def handler(event, sender, data, **args):
 
 def init_drone():
     """Drone initiation function for testing.  """
-    drone = mtellopy.Tello()
+    drone = mtellopy.tello.Tello()
 
     try:
         drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
@@ -39,12 +39,20 @@ if __name__ == '__main__':
     time.sleep(3)
     myTello.drone.up(0)
 
-    while True:
-        data = myTello.get_state()
-        img = myTello.get_frame()
-        if img is not None:
-            cv2.imshow("img", img)
-            cv2.waitKey(1)
-        if data is not None and data.mid > 0:
-            myTello.drone.clockwise(-data.mpry[1])
-        time.sleep(0.018)
+    try:
+        while True:
+            data = myTello.get_state()
+            img = myTello.get_frame()
+            if img is not None:
+                cv2.imshow("img", img)
+                cv2.waitKey(1)
+            if data is not None and data.mid > 0:
+                print(data)
+                if abs(data.mpry[1]) < 2:
+                    break
+                myTello.drone.clockwise(-data.mpry[1]*5)
+            time.sleep(0.018)
+    except KeyboardInterrupt:
+        myTello.drone.land()
+    myTello.drone.land()
+

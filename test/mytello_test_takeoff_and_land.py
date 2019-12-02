@@ -3,6 +3,7 @@ import time
 
 from control.tello_abs import MyTello
 import mtellopy
+import mtellopy.tello
 import threading
 
 
@@ -10,12 +11,13 @@ def handler(event, sender, data, **args):
     """Drone events handler, for testing.  """
     drone_handler = sender
     if event is drone_handler.EVENT_FLIGHT_DATA:
-        print(data)
+        #print(data)
+        pass
 
 
 def init_drone():
     """Drone initiation function for testing.  """
-    drone = mtellopy.Tello()
+    drone = mtellopy.tello.Tello()
 
     try:
         drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
@@ -44,9 +46,12 @@ if __name__ == '__main__':
     video.daemon = True
     video.start()
     myTello.wait_until_video_done()
-
+    time.sleep(5)
     myTello.drone.takeoff()
+    print("take off")
     time.sleep(5)
-    myTello.drone.clockwise(10)
+    print("clockwise")
+    myTello.drone.clockwise(50)
     time.sleep(5)
+    print("land")
     myTello.drone.land()
