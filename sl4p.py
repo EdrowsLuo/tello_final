@@ -15,6 +15,7 @@ class Sl4p:
         self.name = name
         self.style = style
         self.log_level = LOG_LEVEL_ALL
+        self.enable = True
         self.LEVEL_NAME_DIC = {
             LOG_LEVEL_ALL: "ALL",
             LOG_LEVEL_INFO: "INFO",
@@ -41,11 +42,15 @@ class Sl4p:
     def error(self, msg):
         return self._print(LOG_LEVEL_ERROR, msg)
 
+    def __direct_print(self, msg):
+        if self.enable:
+            print(msg)
+
     def _print(self, level, msg):
         if self.log_level <= level:
             if self.msg_to_str is None:
                 _msg = str(msg)
-                print("\033[0;%sm[%s]\033[0;%sm[%s]\033[0;%sm %s\033[0m" %
+                self.__direct_print("\033[0;%sm[%s]\033[0;%sm[%s]\033[0;%sm %s\033[0m" %
                       (self.style or "0", self.name, self.LOG_LEVEL_STYLE[level],
                        self.LEVEL_NAME_DIC[level], self.LOG_LEVEL_MSG_STYLE[level], _msg))
                 return "[%s][%s] %s" % \
@@ -53,7 +58,7 @@ class Sl4p:
                         self.LEVEL_NAME_DIC[level], str(msg))
             else:
                 _msg = self.msg_to_str.to_str(msg, style=True)
-                print("\033[0;%sm[%s]\033[0;%sm[%s]\033[0;%sm %s\033[0m" %
+                self.__direct_print("\033[0;%sm[%s]\033[0;%sm[%s]\033[0;%sm %s\033[0m" %
                       (self.style or "0", self.name, self.LOG_LEVEL_STYLE[level],
                        self.LEVEL_NAME_DIC[level], self.LOG_LEVEL_MSG_STYLE[level], _msg))
                 return "[%s][%s] %s" % \
