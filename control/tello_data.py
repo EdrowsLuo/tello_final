@@ -1,7 +1,27 @@
+from world.world import *
+
+
+class CameraModel:
+    def __init__(self, pixel_x, pixel_y, angle_v):
+        self.pixel_x = pixel_x
+        self.pixel_y = pixel_y
+        self.pixel = np.array([self.pixel_x, self.pixel_y], dtype=np.float64)
+        self.angle_v = angle_v
+        self.dis = pixel_y / 2.0 / np.tan(angle_v / 2)
+        self.angle_h = 2 * np.arctan2(pixel_x / 2.0, self.dis)
+
+    def get_ray(self, pixel_x, pixel_y):
+        r = np.array([pixel_x, pixel_y], dtype=np.float64) - self.pixel / 2
+        return nvec3(r[0], self.dis, -r[1])
+
 
 class TelloData:
+    camera = CameraModel(960, 720, 45.0 / 180.0 * np.pi)
+    cameraMatrix = hpr2matrix(vec3(0, -12, 0) / 180.0 * np.pi)
+
     def __init__(self, state):
         statestr = state.split(';')
+        self.raw = statestr
         for item in statestr:
             if 'mid:' in item:
                 mid = int(item.split(':')[-1])
@@ -29,3 +49,25 @@ class TelloData:
             elif 'yaw:' in item:
                 yaw = int(item.split(':')[-1])
                 self.yaw = yaw
+
+    def get_pos(self):
+        return vec3(self.y, self.x - 100, self.z)
+
+    def get_hpr(self):
+        # TODO: 验证mpry和hpr的关系
+        return vec3(-self.mpry[0], self.mpry[1], self.mpry[2]) / 180.0 * np.pi
+
+    def get_ray(self, pixel_x, pixel_y):
+        """
+        根据当前tello姿态计算对应像素点对应射线检测数据
+        """
+        ray = TelloData.camera.get_ray(pixel_x, pixel_y)
+        ray = np.matmul(TelloData.cameraMatrix, ray)
+        ray = np.matmul(hpr2matrix(self.get_hpr()), ray)
+        return nm(ray)
+
+    def get_look_at(self):
+        """
+        返回无人机正面方向
+        """
+        return nm(np.matmul(hpr2matrix(self.get_hpr()), vec3(0, 1, 0)))

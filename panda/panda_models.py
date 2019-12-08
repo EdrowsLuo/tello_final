@@ -214,7 +214,7 @@ def test1():
             self.rayModel = ModelBox("wall", nar([-0.05, 0, -0.05]), size, (1, 0, 0, 1), self.render)
             self.rayModel.setPos(10, 0, 10)
 
-            size = nar([0.1, 0.1, 0.1])
+            size = nar([0.2, 0.2, 0.2])
             self.pointModel = ModelBox("wall", -size/2.0, size, (0, 0, 1, 1), self.render)
 
             self.task_mgr.add(self.spinCameraTask, "SpinCameraTask")
@@ -228,19 +228,20 @@ def test1():
                 self.pointModel.setPos(0, 0, 0)
             else:
                 self.pointModel.setPos(point[0][0], point[0][1], point[0][2])
-            self.rayModel.setDirection(np.arctan(-ray[0] / ray[1]) / np.pi * 180, np.arctan(ray[2] / ray[1]) / np.pi * 180, 0)
+            self.rayModel.setDirection(np.arctan(-ray[0] / ray[1]) / np.pi * 180, np.arctan(ray[2] / np.linalg.norm(ray[0:-1])) / np.pi * 180, 0)
+            # self.rayModel.setDirection(90, angleDegrees, 0)
             angleDegrees = 0
             angleRadians = angleDegrees*(pi/180.0)
-            self.camera.setPos(40*sin(angleRadians), -40.0*cos(angleRadians), 3)
-            self.camera.setHpr(angleDegrees, 0, 0)
-            self.camera.look_at(0, 0, 3)
+            #self.camera.setPos(40*sin(angleRadians), -40.0*cos(angleRadians), 3)
+            #self.camera.setHpr(angleDegrees, 0, 0)
+            #self.camera.look_at(0, 0, 3)
             #self.plight.setPos(10*sin(angleRadians), -10.0*cos(angleRadians), 3)
             time.sleep(1.0/80.0)
 
             return Task.cont
 
-    #m = ModelBuilderTest()
-    #m.run()
+    m = ModelBuilderTest()
+    m.run()
 
 
 def test2():
@@ -278,4 +279,4 @@ def test2():
 
 
 if __name__ == '__main__':
-    test2()
+    test1()

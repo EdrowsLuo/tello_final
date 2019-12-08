@@ -1,5 +1,5 @@
 # coding=utf-8
-from control import tello_center, tello_abs
+from control import tello_center, tello_abs, tello_data
 import sl4p
 import threading
 """
@@ -14,9 +14,15 @@ class TelloBotStateService(tello_center.Service):
         tello_center.Service.__init__(self)
         self.logger = sl4p.Sl4p(name=TelloBotStateService.name)
         self.reactive = tello_center.service_proxy_by_class(tello_abs.ReactiveImageAndStateService)
+        self.update_lock = threading.Lock()
+        self.state = None  # type: tello_data.TelloData
 
     def update_handler(self, img, state):
-        pass
+        self.update_lock.acquire()
+        try:
+            self.state = state
+        finally:
+            self.update_lock.release()
 
     def start(self):
         def add_handler():
@@ -26,9 +32,6 @@ class TelloBotStateService(tello_center.Service):
             self.reactive,
             target=add_handler
         )
-
-    def is_mid_lost(self):
-        pass
 
     def get_pos(self):
         """
