@@ -73,11 +73,18 @@ def task_done():
     done_pub.publish(1)
     return ''
 
+
 @app.route('/get/targets')
 def get_targets():
     while not all_target_got():
         time.sleep(0.01)
     return '%d %d %d' % (target_id[0], target_id[1], target_id[2])
+
+
+@app.route('/task/done')
+def task_done():
+    done_pub.publish(1)
+    return ''
 
 def all_target_got():
     for s in target_id:

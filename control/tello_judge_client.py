@@ -113,6 +113,9 @@ class JudgeServerOverHttp(JudgeServerInterface):
     def send_target_chest(self, target_idx, chest):
         return int(requests.get(self.base + '/send/target/chest?id=%d&chest=%d'%(target_idx, chest)).content)
 
+    def send_task_done(self):
+        requests.get(self.base + '/task/done')
+
     def get_targets(self):
         ts = requests.get(self.base + '/get/targets').content
         ts = ts.split(' ')
