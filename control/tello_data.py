@@ -12,7 +12,7 @@ class CameraModel:
 
     def get_ray(self, pixel_x, pixel_y):
         r = np.array([pixel_x, pixel_y], dtype=np.float64) - self.pixel / 2
-        return nvec3(r[0], self.dis, -r[1])
+        return nm(vec3(r[0], self.dis, -r[1]) / 100.0)
 
 
 class TelloData:
@@ -21,7 +21,6 @@ class TelloData:
 
     def __init__(self, state):
         statestr = state.split(';')
-        self.raw = statestr
         for item in statestr:
             if 'mid:' in item:
                 mid = int(item.split(':')[-1])
@@ -49,13 +48,27 @@ class TelloData:
             elif 'yaw:' in item:
                 yaw = int(item.split(':')[-1])
                 self.yaw = yaw
+            elif 'bat' in item:
+                self.bat = int(item.split(':')[-1])
+
+        pos = self.get_pos()
+        hpr = self.get_hpr()
+        self.raw = [
+            'pos: (%.2f, %.2f, %.2f)' % (pos[0], pos[1], pos[2]),
+            'hpr: (%.2f, %.2f, %.2f)' % (hpr[0], hpr[1], hpr[2])
+        ]
+        for s in statestr:
+            self.raw.append(s)
 
     def get_pos(self):
-        return vec3(self.y, self.x - 100, self.z)
+        # 85 -> 110
+        # 125 -> 160
+        #
+        return vec3(self.y - 40, self.x - 160, self.z - 30) / 100.0
 
     def get_hpr(self):
         # TODO: 验证mpry和hpr的关系
-        return vec3(-self.mpry[0], self.mpry[1], self.mpry[2]) / 180.0 * np.pi
+        return vec3(-self.mpry[1], self.mpry[0], self.mpry[2]) / 180.0 * np.pi
 
     def get_ray(self, pixel_x, pixel_y):
         """
@@ -71,3 +84,9 @@ class TelloData:
         返回无人机正面方向
         """
         return nm(np.matmul(hpr2matrix(self.get_hpr()), vec3(0, 1, 0)))
+
+    def get_front(self):
+        """
+        无视pitch和roll的正面方向
+        """
+        return nm(np.matmul(hpr2matrix(vec3(self.get_hpr()[0], 0, 0)), vec3(0, 1, 0)))

@@ -1,18 +1,26 @@
+# coding=utf-8
 import time
 import threading
-
+from utils import fps
 import sl4p
 
 _services = {}  # type: dict[Service]
 _start_order = []
 
 _logger = sl4p.Sl4p("service_center")
-_logger.enable = False
+_logger.enable = True
 
 
 class Service:
     def __init__(self):
         self.started = False
+        self.run_flag = True
+
+    def flag(self):
+        return self.run_flag
+
+    def available(self):
+        return True
 
     def call_start(self):
         self.start()
@@ -22,7 +30,7 @@ class Service:
         pass
 
     def on_request_exit(self):
-        pass
+        self.run_flag = False
 
 
 class ServiceProxy:
@@ -30,13 +38,27 @@ class ServiceProxy:
         self.key = key
 
     def available(self):
-        return get_service(self.key) is not None
+        return get_service(self.key) is not None and get_service(self.key).available()
 
     def __getattr__(self, item):
         service = get_service(self.key)
         if service is None:
             return None
         return service.__getattribute__(item)
+
+
+class FpsRecoder(fps.FpsRecoder):
+
+    def __init__(self, name):
+        fps.FpsRecoder.__init__(self, name)
+
+    @staticmethod
+    def key(name):
+        return "fps::%s" % name
+
+    def on_loop(self):
+        if get_config(FpsRecoder.key(self.name), fallback=True):
+            fps.FpsRecoder.on_loop(self)
 
 
 def service_proxy(name):
@@ -76,6 +98,10 @@ def lock_loop():
     input_exit_thread(daemon=False)
 
 
+def input_func(info):
+    pass
+
+
 def input_exit_thread(daemon=True):
     def exit_func():
         while True:
@@ -83,6 +109,9 @@ def input_exit_thread(daemon=True):
             if 'exit' in line:
                 call_request_exit()
                 return
+            else:
+                if len(line) > 0:
+                    input_func(line)
     t = threading.Thread(target=exit_func)
     t.daemon = daemon
     t.start()
@@ -104,7 +133,15 @@ def get_config(key, fallback=None):
         return fallback
 
 
-def wait_until_proxy_available(proxy: ServiceProxy):
+def get_preloaded(key):
+    preload = get_service_by_class(PreLoadService)  # type: PreLoadService
+    if preload is not None:
+        return preload.get_loaded(key)
+    else:
+        return None
+
+
+def wait_until_proxy_available(proxy):
     while not proxy.available():
         time.sleep(0.01)
 
@@ -152,7 +189,10 @@ class PreLoadService(Service):
         self.loaded[key] = obj
 
     def get_loaded(self, key):
-        return self.loaded[key]
+        if key in self.loaded:
+            return self.loaded[key]
+        else:
+            return None
 
     def start(self):
         for t in self.tasks:

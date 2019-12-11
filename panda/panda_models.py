@@ -13,6 +13,7 @@ import numpy as np
 import time
 from world.world import *
 
+
 def nar(d):
     return np.array(d, dtype=np.float64)
 

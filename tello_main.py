@@ -411,7 +411,7 @@ class TelloMain:
     def stage_detect_ball(self, state, img, showimg, do_draw=True, do_control=True):
         if not do_control:
             return
-        result = self.detector.detect_ball(img)
+        result = self.detector.detect(img)
         detected = False
         data = None
         if len(result) > 0:

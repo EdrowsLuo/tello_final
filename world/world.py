@@ -41,7 +41,6 @@ def hpr2matrix(t):
     ], dtype=np.float64)
 
 
-
 def detect_parallel(ray, nor, tol=0.1):
     return abs(np.dot(ray, nor)) < tol
 
@@ -94,6 +93,21 @@ def world_model():
         }
     ]
 
+    itembox = []
+    for m in list:
+        size = vec3(0.40, 0.40, 0.40)
+        raw = m['model']  # type: CollideBox
+        itembox.append({
+            'tag': ['box', 'item'],
+            'id': 'item' + m['id'],
+            'model': CollideBox(org=raw.org + raw.size / 2.0 - size / 2.0 + vec3(0, 0, raw.size[2] / 2.0 + size[2] / 2.0), size=size),
+            'model_big': CollideBox(org=raw.org + raw.size/2.0 - size/2.0 + vec3(0, 0, raw.size[2]/2.0 + size[2]/2.0) - 0.1,
+                                size=size + 0.2),
+        })
+
+    for m in itembox:
+        list.append(m)
+
     l = 0
     index = 0
     sy = 0.03
@@ -112,7 +126,7 @@ def world_model():
             {
                 'tag': ['box', 'wall'],
                 'id': 'wall%d'%index,
-                'model': CollideBox(org=vec3(l, 0, 0), size=vec3(0.41, sy, 1.26))
+                'model': CollideBox(org=vec3(l, 0, 0), size=vec3(0.42, sy, 1.26))
             }
         )
         index += 1
@@ -121,7 +135,7 @@ def world_model():
             {
                 'tag': ['box', 'wall'],
                 'id': 'wall%d'%index,
-                'model': CollideBox(org=vec3(l, 0, 1.26 + 0.3), size=vec3(0.41, sy, 0.1))
+                'model': CollideBox(org=vec3(l, 0, 1.26 + 0.3), size=vec3(0.42, sy, 0.1))
             }
         )
         index += 1
@@ -131,10 +145,10 @@ def world_model():
                 'tag': ['box', 'wall'],
                 'id': 'wall%d'%index,
                 'model': CollideBox(org=vec3(l, 0, 1.26 + 0.3 + 0.1 + 0.3),
-                                    size=vec3(0.41, sy, 2.06 - (1.26 + 0.3 + 0.1 + 0.3)))
+                                    size=vec3(0.42, sy, 2.06 - (1.26 + 0.3 + 0.1 + 0.3)))
             }
         )
-        l += 0.41
+        l += 0.42
         index += 1
 
         list.append(
@@ -151,7 +165,7 @@ def world_model():
             {
                 'tag': ['box', 'wall'],
                 'id': 'wall%d'%index,
-                'model': CollideBox(org=vec3(l, 0, 0), size=vec3(0.41, sy, 1.26))
+                'model': CollideBox(org=vec3(l, 0, 0), size=vec3(0.42, sy, 1.26))
             }
         )
         index += 1
@@ -160,7 +174,7 @@ def world_model():
             {
                 'tag': ['box', 'wall'],
                 'id': 'wall%d'%index,
-                'model': CollideBox(org=vec3(l, 0, 1.26 + 0.3), size=vec3(0.41, sy, 0.1))
+                'model': CollideBox(org=vec3(l, 0, 1.26 + 0.3), size=vec3(0.42, sy, 0.1))
             }
         )
         index += 1
@@ -170,10 +184,10 @@ def world_model():
                 'tag': ['box', 'wall'],
                 'id': 'wall%d'%index,
                 'model': CollideBox(org=vec3(l, 0, 1.26 + 0.3 + 0.1 + 0.3),
-                                    size=vec3(0.41, sy, 2.06 - (1.26 + 0.3 + 0.1 + 0.3)))
+                                    size=vec3(0.42, sy, 2.06 - (1.26 + 0.3 + 0.1 + 0.3)))
             }
         )
-        l += 0.41
+        l += 0.42
         index += 1
 
         list.append(
@@ -185,7 +199,14 @@ def world_model():
         )
         l += 0.06
         index += 1
-
+    list.append(
+        {
+            'tag': ['surface', 'wall'],
+            'id': 'wall_surface,',
+            'model': CollideSurface(org=vec3(0, 0, 0), vec_x=vec3(3, 0, 0), vec_y=vec3(0, 0, 2.06), nor=vec3(0, -1, 0)),
+            'model_box': CollideBox(org=vec3(0, 0.01, 0), size=[3, 0.01, 2.06])
+        }
+    )
     return list
 
 
@@ -211,7 +232,7 @@ class CollideSurface:
         side_x = np.dot(surface_vec, self.nvec_x)
         side_y = np.dot(surface_vec, self.nvec_y)
         if collide_point2rect(side_x, side_y, 0, 0, self.lvec_x, self.lvec_y):
-            return result[0], result[1]
+            return result[0], result[1]  # pos, mul
         else:
             return None
 

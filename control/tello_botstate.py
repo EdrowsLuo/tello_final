@@ -1,7 +1,14 @@
 # coding=utf-8
+import time
+
+import cv2
+
 from control import tello_center, tello_abs, tello_data
 import sl4p
 import threading
+
+from image_detecte.detect import Detect
+
 """
 保存Tello的姿态、位置
 """
@@ -53,3 +60,17 @@ class TelloBotStateService(tello_center.Service):
         返回无人机正面方向
         """
         pass
+
+
+if __name__ == '__main__':
+    logger = sl4p.Sl4p("__main__", "1")
+    img = cv2.imread('../image_detecte/data/samples/0.jpg')
+    logger.info("start")
+    detector = Detect(0.1)
+    start = time.time()
+    logger.info("start detect")
+    result_obj = detector.detect(img)
+    end = time.time()
+    logger.info("time: " + str(end - start) + "s")
+    for r in result_obj:
+        logger.info(str(r))

@@ -15,7 +15,7 @@ class RosService(tello_center.Service):
         """
         是否允许起飞
         """
-        pass
+        return True
 
     def publish_takeoff(self):
         """

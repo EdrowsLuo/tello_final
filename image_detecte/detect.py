@@ -3,26 +3,66 @@ import time
 from sys import platform
 
 import sl4p
-from models import *
+from image_detecte.models import *
 import threading
 
 
 class DetectResult:
-    def __init__(self, x1, y1, x2, y2, object_conf, class_conf, class_name, color):
-        self.x1, self.y1, self.x2, self.y2, self.object_conf, self.class_conf, self.class_name, self.color = \
-            x1, y1, x2, y2, object_conf, class_conf, class_name, color
+    def __init__(self, x1, y1, x2, y2, object_conf, class_conf, class_idx, class_name, color):
+        self.x1, self.y1, self.x2, self.y2, self.object_conf, self.class_conf, self.class_idx, self.class_name, self.color = \
+            x1, y1, x2, y2, object_conf, class_conf, class_idx, class_name, color
 
     def __str__(self):
         return "[(x1, y1, x1, y2) = (%d, %d, %d, %d), conf = (%.2f, %.2f), %s\ncolor = %s]" \
                %(self.x1, self.y1, self.x2, self.y2, self.object_conf, self.class_conf, self.class_name, str(self.color))
 
 
+class ResultCollection:
+    def __init__(self):
+        self.map = {}
+        self.call_times = 0
+
+    def add_result(self, result: DetectResult):
+        if result.class_name not in self.map:
+            self.map[result.class_name] = []
+        self.map[result.class_name].append(result)
+
+    def add_all_results(self, results):
+        self.call_times += 1
+        if results is None:
+            return
+        for rr in results:
+            self.add_result(rr)
+
+    def get_result_collection(self):
+        result_collect = {}
+        for ss in self.map:
+            count = 0
+            conf = 0
+            obj_conf = 0
+            for rs in self.map[ss]:
+                count += 1
+                conf += rs.class_conf
+                obj_conf += rs.object_conf
+            conf = conf / count
+            obj_conf = obj_conf / count
+            result_collect[ss] = {
+                'call_times': self.call_times,
+                'count': count,
+                'class_conf': float(conf),
+                'object_conf': float(obj_conf)
+            }
+        return result_collect
+
+
 class Detect:
     def __init__(self, conf):
         # Initialize this once
-        cfg = 'cfg/yolov3.cfg'
-        weights = 'weights/ball.pt'
-        output = 'data/output'
+        main_dir = os.path.split(os.path.abspath(__file__))[0]
+        self.main_dir = main_dir
+        cfg = os.path.join(main_dir, 'cfg/yolov3.cfg')
+        weights = os.path.join(main_dir, 'weights/fire_new_1207.pt')
+        output = os.path.join(main_dir, 'data/output')
         img_size = 416
         self.conf_thres = conf
 
@@ -48,23 +88,24 @@ class Detect:
         # Export mode
         if ONNX_EXPORT:
             img = torch.zeros((1, 3, s[0], s[1]))
-            torch.onnx.export(model, img, 'weights/export.onnx', verbose=True)
+            torch.onnx.export(model, img, os.path.join(main_dir, 'weights/export.onnx'), verbose=True)
             return
         self.model = model
         self.device = device
         # Eval mode
         self.model.to(device).eval()
+        self.colors = None
 
-    def detect_ball(self, img):
+    def detect(self, img):
         # type: (object) -> list[DetectResult]
         # Initialized  for every detection
-        data = 'data/ball.data'
-        output = 'data/output'
+        data = os.path.join(self.main_dir, 'data/fire.data')
+        output = os.path.join(self.main_dir, 'data/output')
         img_size = 416
         nms_thres = 0.5
         save_txt = False
         save_images = False
-        save_path = 'data/output/result.jpg'
+        save_path = os.path.join(self.main_dir, 'data/output/result.jpg')
         # Set Dataloader
         img0 = img  # BGR
 
@@ -80,8 +121,10 @@ class Detect:
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
 
         # Get classes and colors
-        classes = load_classes(parse_data_cfg(data)['names'])
-        colors = [[random.randint(0, 255) for _ in range(3)] for _ in range(len(classes))]
+        classes = load_classes(os.path.join(self.main_dir, parse_data_cfg(data)['names']))
+        if self.colors is None:
+            self.colors = [[random.randint(0, 255) for _ in range(3)] for _ in range(len(classes))]
+        colors = self.colors
 
         # Run inference
         # t0 = time.time()
@@ -106,8 +149,25 @@ class Detect:
             result = []
             for x in range(len(det)):
                 result.append(DetectResult(det[x][0], det[x][1], det[x][2], det[x][3],
-                                           det[x][4], det[x][5], classes[int(det[x][6])], colors[int(det[x][6])]))
+                                           det[x][4], det[x][5], int(det[x][6]), classes[int(det[x][6])], colors[int(det[x][6])]))
             return result
+
+    def draw_result(self, img, det, show=False):
+        if det is None or len(det) == 0:
+            if show:
+                cv2.imshow('result', img)
+                cv2.waitKey(1)
+            return
+        for det_pack in det:
+            xyxy = []
+            for c in [det_pack.x1, det_pack.y1, det_pack.x2, det_pack.y2]:
+                xyxy.append(c)
+            conf = det_pack.class_conf
+            label = '%s %.2f %.2f'%(det_pack.class_name, conf, det_pack.object_conf)
+            plot_one_box(xyxy, img, label=label, color=det_pack.color)
+        if show:
+            cv2.imshow('result', img)
+            cv2.waitKey(1)
 
     def letterbox(self, img, new_shape=416, color=(128, 128, 128), mode='auto'):
         # Resize a rectangular image to a 32 pixel multiple rectangle
@@ -147,14 +207,19 @@ class Detect:
 
 if __name__ == '__main__':
     logger = sl4p.Sl4p("__main__", "1")
-    img = cv2.imread('data/samples/7.jpg')
     logger.info("start")
     detector = Detect(0.1)
-    start = time.time()
-    logger.info("start detect")
-    result_obj = detector.detect_ball(img)
-    end = time.time()
-    logger.info("time: " + str(end - start) + "s")
-    for r in result_obj:
-        logger.info(str(r))
+    logger.info("CUDA %s" % str(torch.cuda.is_available()))
+    test_files = [0, 1, 2, 3, 4]
+    for s in test_files:
+        img = cv2.imread('data/samples/%s.jpg' % s)
+        start = time.time()
+        logger.info("start detect %s" % s)
+        result_obj = detector.detect(img)
+        #detector.draw_result(img, result_obj)
+        end = time.time()
+        logger.info("time: " + str(end - start) + "s")
+        for r in result_obj:
+            logger.info(str(r))
+
 

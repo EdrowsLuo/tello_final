@@ -1,8 +1,7 @@
-/h264decoder/build/
-libh264decoder.so
 *.pyc
 __pycache__
-weights
+image_detecte/weights
 .idea
 *.png
 *.jpg
+*.avi

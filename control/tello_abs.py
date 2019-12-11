@@ -10,15 +10,18 @@ import numpy as np
 import sl4p
 from stats import Stats
 from control.tello_data import TelloData
-
+from utils.fps import FpsRecoder
 
 class TimeoutException(Exception):
     def __init__(self, msg):
-        super.__init__(msg)
+        Exception.__init__(self, msg)
 
 
 class MyTello:
     """Wrapper class to interact with the Tello drone."""
+
+    KEY_STATE_FPS = 'state_fps'
+    KEY_VIDEO_FPS = 'video_fps'
 
     def __init__(self, local_ip, local_port, imperial=False, command_timeout=.3, tello_ip='192.168.10.1',
                  tello_port=8889):
@@ -90,6 +93,7 @@ class MyTello:
         self.video_lock = threading.Lock()
         self.state = None
         self.image = None
+        self.has_takeoff = False
 
     def print_info(self, msg):
         if self.do_print_info:
@@ -99,7 +103,7 @@ class MyTello:
 
     def __del__(self):
         """Closes the local socket."""
-
+        self.land()
         self.socket.close()
         self.socket_state.close()
 
@@ -107,20 +111,29 @@ class MyTello:
         self.video_lock.acquire()
         self.state_lock.acquire()
         try:
-            return self.image, self.state
+            return self.image, self.state  # type: (np.ndarray, TelloData)
         finally:
             self.state_lock.release()
             self.video_lock.release()
 
-    def wait_for_image_and_state(self, timeout=20):
+    def get_state(self) -> TelloData:
+        self.state_lock.acquire()
+        try:
+            return self.state
+        finally:
+            self.state_lock.release()
+
+    def wait_for_image_and_state(self, timeout=60):
         start = time.time()
         while True:
             img, s = self.get_image_and_state()
             if img is not None and s is not None:
+                self.logger.info('image and state got')
                 return
             if time.time() - start > timeout:
                 self.logger.error("timeout: wait_for_image_and_state")
                 raise TimeoutException(msg="timeout: wait_for_image_and_state")
+            time.sleep(0.1)
 
     def _receive_thread(self):
         """Listen to responses from the Tello.
@@ -131,7 +144,8 @@ class MyTello:
 
         while True:
             try:
-                self.response, ip = self.socket.recvfrom(3000)
+                response, ip = self.socket.recvfrom(3000)
+                self.response = response.decode()
                 if len(self.log) != 0:
                     self._on_response(self.response)
                     self.log[-1].add_response(self.response)
@@ -156,37 +170,49 @@ class MyTello:
             self.response_handler_lock.release()
 
     def _receive_video_thread(self):
+        video_fps = tello_center.FpsRecoder(MyTello.KEY_VIDEO_FPS)
         cap = cv2.VideoCapture("udp://0.0.0.0:11111")
         frame_to_skip = 120  # 跳过前120帧
         while True:
             _, img = cap.read()
+
             if img is not None:
+                video_fps.on_loop()
                 if frame_to_skip > 0:
                     frame_to_skip -= 1
                 else:
-                    self.video_lock.acquire()
-                    try:
-                        self.image = img
-                    finally:
-                        self.video_lock.release()
+                    self.image = img
+                    # cv2.imshow('raw', img)
+                    # cv2.waitKey(1)
+                    #self.video_lock.acquire()
+                    #try:
+                    #    self.image = img
+                    #finally:
+                    #    self.video_lock.release()
+            else:
+                time.sleep(0.001)
 
     def _receive_state_thread(self):
+        state_fps = tello_center.FpsRecoder(MyTello.KEY_STATE_FPS)
         while True:
             try:
                 state, ip = self.socket_state.recvfrom(1024)
+                state = state.decode()
                 out = state.replace(';', ';\n')
                 self.results = out.split()
                 if not (self.results == 'ok'):
+                    state_fps.on_loop()
+                    s = TelloData("".join(self.results[0:8]) + self.results[15])
                     self.state_lock.acquire()
                     try:
-                        s = TelloData("".join(self.results[0:8]))
+                        self.state = s
                         if s.mid != -1:
                             self.latest_safe_state = s
                     finally:
                         self.state_lock.release()
                 # self.print_info(self.response)
-            except socket.error as exc:
-                self.logger.error("Caught exception socket.error : %s"%exc)
+            except BaseException as exc:
+                self.logger.error("Caught exception : %s"%exc)
 
     def send_command(self, command):
         """
@@ -218,6 +244,7 @@ class MyTello:
             self.print_info("Done!!! sent command: %s to %s"%(command, self.tello_ip))
             return self.log[-1].got_response()
         finally:
+            time.sleep(0.7)
             self.request_lock.release()
 
     def set_abort_flag(self):
@@ -240,7 +267,7 @@ class MyTello:
             str: Response from Tello, 'OK' or 'FALSE'.
 
         """
-
+        self.has_takeoff = True
         return self.send_command('takeoff')
 
     def set_speed(self, speed):
@@ -403,8 +430,20 @@ class MyTello:
             str: Response from Tello, 'OK' or 'FALSE'.
 
         """
-
+        self.has_takeoff = False
         return self.send_command('land')
+
+    def go(self, x, y, z, speed=60):
+        """
+        x+ 前
+        y- 右
+        z- 上
+        @return:
+        """
+        x = int(x * 100.0)
+        y = -int(y * 100.0)
+        z = int(z * 100.0)
+        return self.send_command('go %d %d %d %d' % (x, y, z, speed))
 
     def move(self, direction, distance):
         """Moves in a direction for a distance.
@@ -438,9 +477,6 @@ class MyTello:
 
         See comments for Tello.move().
 
-        Args:
-            distance (int): Distance to move.
-
         Returns:
             str: Response from Tello, 'OK' or 'FALSE'.
 
@@ -452,9 +488,6 @@ class MyTello:
         """Moves down for a distance.
 
         See comments for Tello.move().
-
-        Args:
-            distance (int): Distance to move.
 
         Returns:
             str: Response from Tello, 'OK' or 'FALSE'.
@@ -468,9 +501,6 @@ class MyTello:
 
         See comments for Tello.move().
 
-        Args:
-            distance (int): Distance to move.
-
         Returns:
             str: Response from Tello, 'OK' or 'FALSE'.
 
@@ -481,9 +511,6 @@ class MyTello:
         """Moves left for a distance.
 
         See comments for Tello.move().
-
-        Args:
-            distance (int): Distance to move.
 
         Returns:
             str: Response from Tello, 'OK' or 'FALSE'.
@@ -496,9 +523,6 @@ class MyTello:
 
         See comments for Tello.move().
 
-        Args:
-            distance (int): Distance to move.
-
         """
         return self.move('right', distance)
 
@@ -506,9 +530,6 @@ class MyTello:
         """Moves up for a distance.
 
         See comments for Tello.move().
-
-        Args:
-            distance (int): Distance to move.
 
         Returns:
             str: Response from Tello, 'OK' or 'FALSE'.
@@ -541,11 +562,13 @@ class TelloBackendService(tello_center.Service):
         self.drone.stop = config[TelloBackendService.CONFIG_STOP] or False if config is not None else False
         self.drone.do_print_info = True
         self.drone.filter = self.filter_msg
-        self.drone.logger.info("wait for image and state")
+        tello_center.input_func = lambda info: self.drone.send_command(info)
         if config is not None and config[TelloBackendService.CONFIG_AUTO_WAIT_FOR_START_IMAGE_AND_STATE]:
+            self.drone.logger.info("wait for image and state")
             self.drone.wait_for_image_and_state()
 
     def on_request_exit(self):
+        tello_center.Service.on_request_exit(self)
         if tello_center.get_config(TelloBackendService.CONFIG_AUTO_LAND_ON_EXIT, True):
             self.drone.land()
 
@@ -580,7 +603,7 @@ class ReactiveImageAndStateService(tello_center.Service):
         self.state = state
         try:
             for h in self.handlers:
-                h(self.img, self.state)
+                h(img, state)
         finally:
             self.lock.release()
 
@@ -589,7 +612,7 @@ class ReactiveImageAndStateService(tello_center.Service):
         while True:
             img, state = self.backend.drone.get_image_and_state()
             if self.state is state and self.img is img:
-                time.sleep(0.01)
+                time.sleep(0.02)
                 continue
             self.on_data_updated(img, state)
             time.sleep(0.01)
