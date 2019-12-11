@@ -1,11 +1,19 @@
 # coding=utf-8
 from control import tello_center
+import requests
 import copy
 import sl4p
+import time
 
 CODE_ERROR_TARGET = 0
 CODE_CONTINUE = 1
 CODE_TASK_DONE = 2
+
+code2name = {
+    CODE_ERROR_TARGET: "CODE_ERROR_TARGET",
+    CODE_CONTINUE: "CODE_CONTINUE",
+    CODE_TASK_DONE: "CODE_TASK_DONE"
+}
 
 NAME_BABY = 'baby'
 NAME_PAINTING = 'painting'
@@ -20,12 +28,12 @@ IDX_BABY = 4
 IDX_GAS_TANK = 5
 
 name2id = {
-            'cat': 1,
-            'painting': 2,
-            'files': 3,
-            'baby': 4,
-            'gas tank': 5
-        }
+    'cat': IDX_CAT,
+    'painting': IDX_PAINTING,
+    'files': IDX_FILES,
+    'baby': IDX_BABY,
+    'gas tank': IDX_GAS_TANK
+}
 
 id2name = {
     IDX_CAT: NAME_CAT,
@@ -80,6 +88,40 @@ class JudgeServerInterface(tello_center.Service):
         raise NotImplemented()
 
 
+class JudgeServerOverHttp(JudgeServerInterface):
+
+    def __init__(self):
+        JudgeServerInterface.__init__(self)
+        self.logger = sl4p.Sl4p('judge_http')
+        self.base = 'http://127.0.0.1:5000'
+
+    def takeoff(self):
+        self.logger.info('takeoff')
+        requests.get(self.base + '/takeoff')
+        start_time = time.time()
+        while True:
+            can_take_off = int(requests.get(self.base + '/can/takeoff').content)
+            if can_take_off == 1:
+                return
+            if time.time() - start_time > 20:
+                raise BaseException('Timeout!')
+
+    def seen_fire(self):
+        self.logger.info('seen_fire')
+        requests.get(self.base + '/seen/fire')
+
+    def send_target_chest(self, target_idx, chest):
+        return int(requests.get(self.base + '/send/target/chest?id=%d&chest=%d'%(target_idx, chest)).content)
+
+    def get_targets(self):
+        ts = requests.get(self.base + '/get/targets').content
+        ts = ts.split(' ')
+        rqs = []
+        for s in ts:
+            rqs.append(int(s))
+        return rqs
+
+
 class JudgeServerLocal(JudgeServerInterface):
 
     def __init__(self):
@@ -99,18 +141,18 @@ class JudgeServerLocal(JudgeServerInterface):
 
     def send_target_chest(self, target_idx, chest):
         if target_idx != self.next_receive_idx:
-            self.logger.info('%d error order %d' % (self.next_receive_idx, target_idx))
+            self.logger.info('%d error order %d'%(self.next_receive_idx, target_idx))
             return CODE_ERROR_TARGET
         if self.results[target_idx - 1] != chest:
             self.logger.info('%d error chest %s %d (correct %d)'
-                             % (target_idx, id2name[self.targets[target_idx - 1]], chest, self.results[target_idx]))
+                             %(target_idx, id2name[self.targets[target_idx - 1]], chest, self.results[target_idx]))
             return CODE_ERROR_TARGET
         else:
             self.next_receive_idx += 1
             return CODE_CONTINUE
 
     def get_targets(self):
-        self.logger.info("%s %s %s" % (id2name[self.targets[0]], id2name[self.targets[1]], id2name[self.targets[2]]))
+        self.logger.info("%s %s %s"%(id2name[self.targets[0]], id2name[self.targets[1]], id2name[self.targets[2]]))
         return copy.copy(self.targets)
 
 
@@ -123,7 +165,7 @@ class JudgeClientService(tello_center.Service):
             self.obj_name = obj_name
 
         def __str__(self):
-            return "(%d, %s)" % (self.idx, self.obj_name)
+            return "(%d, %s)"%(self.idx, self.obj_name)
 
     def __init__(self):
         tello_center.Service.__init__(self)
@@ -184,9 +226,8 @@ if __name__ == '__main__':
 
     client.server.takeoff()
     client.server.seen_fire()
-    logger.info(client.put_chest_info(1, NAME_BABY))
-    logger.info(client.put_chest_info(3, NAME_CAT))
-    logger.info(client.put_chest_info(2, NAME_GAS_TANK))
-    logger.info(client.put_chest_info(4, NAME_FILES))
-    logger.info(client.put_chest_info(5, NAME_PAINTING))
-
+    logger.info(code2name[client.put_chest_info(1, NAME_BABY)])
+    logger.info(code2name[client.put_chest_info(3, NAME_CAT)])
+    logger.info(code2name[client.put_chest_info(2, NAME_GAS_TANK)])
+    logger.info(code2name[client.put_chest_info(4, NAME_FILES)])
+    logger.info(code2name[client.put_chest_info(5, NAME_PAINTING)])
