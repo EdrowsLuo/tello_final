@@ -6,9 +6,9 @@ from std_msgs.msg import String, Int16, Bool
 
 GROUP_INDEX = 41
 
-CODE_ERROR_TARGET = 0
-CODE_CONTINUE = 1
-CODE_TASK_DONE = 2
+CODE_ERROR_TARGET = '0'
+CODE_CONTINUE = '1'
+CODE_TASK_DONE = '2'
 
 takeoff_pub, seenfire_pub, tgt1_pub, tgt2_pub, tgt3_pub, done_pub = None, None, None, None, None, None
 state_fail = 0
@@ -66,12 +66,6 @@ def send_target_chest():
             time.sleep(0.01)
         return CODE_CONTINUE
     return CODE_ERROR_TARGET
-
-
-@app.route('/done')
-def task_done():
-    done_pub.publish(1)
-    return ''
 
 
 @app.route('/get/targets')
@@ -135,8 +129,8 @@ def target3_handle(data):
 
 
 if __name__ == '__main__':
-
-    groupid = '/group' + str(GROUP_INDEX)
+    rospy.init_node('control', anonymous=False)
+    groupid = '/' + str(GROUP_INDEX)
 
     takeoff_pub = rospy.Publisher(groupid + '/takeoff', Int16, queue_size=3)
     seenfire_pub = rospy.Publisher(groupid + '/seenfire', Int16, queue_size=3)

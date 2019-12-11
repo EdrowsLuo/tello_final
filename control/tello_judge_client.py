@@ -118,7 +118,7 @@ class JudgeServerOverHttp(JudgeServerInterface):
 
     def get_targets(self):
         ts = requests.get(self.base + '/get/targets').content
-        ts = ts.split(' ')
+        ts = ts.split(b' ')
         rqs = []
         for s in ts:
             rqs.append(int(s))
@@ -222,7 +222,7 @@ class JudgeClientService(tello_center.Service):
 if __name__ == '__main__':
     logger = sl4p.Sl4p('__main__')
     tello_center.register_service(JudgeClientService())
-    tello_center.register_service(JudgeServerLocal())
+    tello_center.register_service(JudgeServerOverHttp())
     tello_center.start_all_service()
 
     client = tello_center.service_proxy_by_class(JudgeClientService)  # type: JudgeClientService
