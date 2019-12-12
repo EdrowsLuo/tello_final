@@ -22,6 +22,9 @@ class Service:
     def available(self):
         return True
 
+    def on_register(self):
+        pass
+
     def call_start(self):
         self.start()
         self.started = True
@@ -57,7 +60,7 @@ class FpsRecoder(fps.FpsRecoder):
         return "fps::%s" % name
 
     def on_loop(self):
-        if get_config(FpsRecoder.key(self.name), fallback=True):
+        if get_config(FpsRecoder.key(self.name), fallback=False):
             fps.FpsRecoder.on_loop(self)
 
 
@@ -83,6 +86,7 @@ def get_service_by_class(klass):
 def register_service(model):
     _services[model.name] = model
     _start_order.append(model)
+    model.on_register()
     _logger.info("register service:%s"%model.name)
 
 
@@ -133,6 +137,10 @@ def get_config(key, fallback=None):
         return fallback
 
 
+def debug():
+    return get_config(ConfigService.CONFIG_DEBUG, fallback=True)
+
+
 def get_preloaded(key):
     preload = get_service_by_class(PreLoadService)  # type: PreLoadService
     if preload is not None:
@@ -159,14 +167,34 @@ def async_wait_until_proxy_available(proxy: ServiceProxy, target=None):
 class ConfigService(Service):
     name = 'ConfigService'
 
+    CONFIG_DEBUG = 'config::debug'
+
+    CONFIG_SERVICE_BLACK_LIST = 'config::service_black_list'
+
     def __init__(self, config=None):
         Service.__init__(self)
+        self.logger = sl4p.Sl4p('config_service')
         self.config = {
-            'enableConfig': True
+            ConfigService.CONFIG_DEBUG: True,
+            ConfigService.CONFIG_SERVICE_BLACK_LIST: []
         }
         if config is not None:
             for key in config:
                 self.config[key] = config[key]
+
+    def on_register(self):
+        global register_service
+
+        pre_register = register_service
+
+        def new_register(model):
+            if model.name in self[ConfigService.CONFIG_SERVICE_BLACK_LIST]:
+                self.logger.info('%s is in black list' % model.name)
+                return
+            else:
+                pre_register(model)
+
+        register_service = new_register
 
     def get_config(self, key):
         return self.config[key] if key in self.config else None

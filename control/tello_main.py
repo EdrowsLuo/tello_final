@@ -5,6 +5,9 @@ from control import tello_abs, tello_image_process, tello_panda, \
 
 if __name__ == '__main__':
     tello_center.register_service(tello_center.ConfigService(config={
+        # main config
+        tello_center.ConfigService.CONFIG_DEBUG: True,
+
         # Tello backend config
         tello_abs.TelloBackendService.CONFIG_STOP: False,
         tello_abs.TelloBackendService.CONFIG_AUTO_WAIT_FOR_START_IMAGE_AND_STATE: True,
@@ -26,14 +29,14 @@ if __name__ == '__main__':
         }
     }))
     tello_center.register_service(tello_center.PreLoadService(tasks=[
-        tello_image_process.ImageProcessService.preload,
         tello_yolo.YoloService.preload
     ]))
     tello_center.register_service(tello_abs.TelloBackendService())  # 提供基础控制和数据
     tello_center.register_service(tello_abs.ReactiveImageAndStateService())
-    tello_center.register_service(tello_image_process.ImageProcessService(handlers=[
-        #tello_image_process.ProxyImageHandler(tello_image_process.FireDetector)
-    ]))  # 提供图片预览
+    if tello_center.debug():
+        tello_center.register_service(tello_image_process.ImageProcessService(handlers=[
+            # tello_image_process.ProxyImageHandler(tello_image_process.FireDetector)
+        ]))  # 提供图片预览
     tello_center.register_service(tello_judge_client.JudgeServerLocal())
     tello_center.register_service(tello_judge_client.JudgeClientService())
     tello_center.register_service(tello_world.WorldService())  # 世界模型，提供碰撞检测
