@@ -4,7 +4,7 @@ import time
 import cv2
 import numpy as np
 
-from control import tello_center, tello_abs, tello_data, tello_world, tello_panda, tello_ros_reactive
+from control import tello_center, tello_abs, tello_data, tello_world, tello_panda
 from image_detecte.redball_detecter import *
 from image_detecte import redball_detecter
 import threading

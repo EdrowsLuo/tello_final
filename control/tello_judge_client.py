@@ -4,6 +4,7 @@ import requests
 import copy
 import sl4p
 import time
+import random
 
 CODE_ERROR_TARGET = 0
 CODE_CONTINUE = 1
@@ -127,12 +128,39 @@ class JudgeServerOverHttp(JudgeServerInterface):
 
 class JudgeServerLocal(JudgeServerInterface):
 
+    CONFIG_BOX_INFO = 'JudgeServerLocal::CONFIG_BOX_INFO'
+    CONFIG_RANDOM_SEED = 'JudgeServerLocal::CONFIG_RANDOM_SEED'
+
     def __init__(self):
         JudgeServerInterface.__init__(self)
         self.logger = sl4p.Sl4p('judge_local')
-        self.targets = [IDX_BABY, IDX_CAT, IDX_FILES]
-        self.results = [1, 3, 4]
+        self.targets = None
+        self.results = None
         self.next_receive_idx = 1
+
+    def start(self):
+        info = tello_center.get_config(JudgeServerLocal.CONFIG_BOX_INFO, fallback=None)
+        if info is None:
+            info = {
+                1: IDX_CAT,
+                2: IDX_GAS_TANK,
+                3: IDX_BABY,
+                4: IDX_FILES,
+                5: IDX_PAINTING
+            }
+        self.targets = []
+        self.results = []
+        rand = random.Random(tello_center.get_config(JudgeServerLocal.CONFIG_RANDOM_SEED, fallback=None))
+        while len(self.targets) != 3:
+            idx = rand.randint(1, 5)
+            if idx in self.results:
+                continue
+            self.results.append(idx)
+            self.targets.append(info[idx])
+        self.logger.info("Initial with {%d: %s, %d: %s, %d: %s}"
+                         % (self.results[0], id2name[self.targets[0]],
+                            self.results[1], id2name[self.targets[1]],
+                            self.results[2], id2name[self.targets[2]]))
 
     def takeoff(self):
         self.logger.info('takeoff')

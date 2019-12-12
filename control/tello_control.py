@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 import sl4p
-from control import tello_center, tello_abs, tello_data, tello_image_process, tello_ros_reactive, tello_yolo
+from control import tello_center, tello_abs, tello_data, tello_yolo, tello_judge_client
 from image_detecte.redball_detecter import *
 from image_detecte import detect
 from utils.drone_util import *
@@ -43,8 +43,8 @@ class MainControl(tello_center.Service):
         tello_center.Service.__init__(self)
         self.logger = sl4p.Sl4p(MainControl.name)
         self.backend = tello_center.service_proxy_by_class(tello_abs.TelloBackendService)  # type: tello_abs.TelloBackendService
-        self.ros = tello_center.service_proxy_by_class(tello_ros_reactive.RosService)  # type: tello_ros_reactive.RosService
         self.yolo = tello_center.service_proxy_by_class(tello_yolo.YoloService)  # type: tello_yolo.YoloService
+        self.judge = tello_center.service_proxy_by_class(tello_judge_client.JudgeClientService)
         self.stage = None
         self.args = None
 
@@ -66,11 +66,11 @@ class MainControl(tello_center.Service):
         self.stage.on_into_stage()
 
     def wait_for_start(self):
-        if self.backend.available() and self.ros.available():
+        if self.backend.available():
             if self.backend.drone.has_takeoff:
                 self.jump_stage(self.stage_go_to_step2_start_pos)
                 return
-            if not self.backend.drone.has_takeoff and self.ros.can_takeoff():
+            if not self.backend.drone.has_takeoff:
                 self.logger.info("takeoff")
                 self.backend.drone.takeoff()
                 #self.backend.drone.go(0.7, -1.2, 0.6)
@@ -162,6 +162,8 @@ class MainControl(tello_center.Service):
                     self.backend.drone.move_right(0.5)
 
     def step2(self):
+
+
         goto(self.backend, 2.6, 2.9, 2.0, self.flag, tol=0.35)
 
         look_at(self.backend, 10, 3.20, 2.1, self.flag)
