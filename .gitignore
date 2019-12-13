@@ -1,6 +1,7 @@
 *.pyc
 __pycache__
 image_detecte/weights
+mydetect/weights
 .idea
 *.png
 *.jpg
