@@ -2,7 +2,7 @@ import os
 
 import torch
 import cv2
-
+import sl4p
 import locks
 from mydetect.models import EfficientDet
 import numpy as np
@@ -19,6 +19,7 @@ class Detect(object):
 
     def __init__(self, threshold, weights=None, iou_threshold=0.3, num_class=6, network='efficientdet-d0', size_image=(512, 512)):
         super(Detect,  self).__init__()
+        self.logger = sl4p.Sl4p('my_detect')
         if weights is None:
             main_dir = os.path.split(os.path.abspath(__file__))[0]
             weights = os.path.join(main_dir, 'weights/checkpoint_efficientdet-d0_61.pth')
@@ -28,8 +29,8 @@ class Detect(object):
             "cuda:0" if torch.cuda.is_available() else 'cpu')
         self.transform = get_augumentation(phase='test')
         self.show_transform = get_augumentation(phase='show')
-        if(self.weights is not None):
-            print('Load pretrained Model')
+        if self.weights is not None:
+            self.logger.info('Load pretrained Model')
             checkpoint = torch.load(
                 self.weights, map_location=lambda storage, loc: storage)
             num_class = checkpoint['num_class']
@@ -40,7 +41,7 @@ class Detect(object):
             is_training=False, threshold=threshold, iou_threshold=iou_threshold
         )
 
-        if(self.weights is not None):
+        if self.weights is not None:
             state_dict = checkpoint['state_dict']
             self.model.load_state_dict(state_dict)
         self.model = self.model.cuda()

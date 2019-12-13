@@ -67,7 +67,7 @@ class EfficientDet(nn.Module):
             scores_over_thresh = (scores > self.threshold)[0, :, 0]
 
             if scores_over_thresh.sum() == 0:
-                print('No boxes to NMS')
+                # print('No boxes to NMS')
                 # no boxes to NMS, just return
                 return [torch.zeros(0), torch.zeros(0), torch.zeros(0, 4)]
             classification = classification[:, scores_over_thresh, :]
