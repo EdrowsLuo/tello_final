@@ -245,8 +245,13 @@ class DetectImage(Task):
         self.img = img
         self.detector = detector
 
-    def detect_img(self):
-        self.result = self.detector.detect(self.img)
+    def detect_img(self, idx=0):
+        if idx > 10:
+            raise BaseException()
+        try:
+            self.result = self.detector.detect(self.img)
+        except RuntimeError:
+            self.detect_img(idx=idx + 1)
 
 
 class TaskLoop:
@@ -278,6 +283,11 @@ class TaskLoop:
             time.sleep(0.01)
         for t in self.tasks:
             t.run()
+
+    def start_async(self, daemon=True):
+        t = threading.Thread(target=self.start)
+        t.daemon = daemon
+        t.start()
 
 
 def async_main():

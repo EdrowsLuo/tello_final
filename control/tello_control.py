@@ -166,7 +166,7 @@ class MainControl(tello_center.Service):
             else:
                 self.backend.drone.move_right(0.5)
                 if 170 < state.y + 50 < 230:
-                    self.backend.drone.move_right(0.5)
+                    self.backend.drone.move_right(0.8)
 
     def step2(self):
 
@@ -174,13 +174,11 @@ class MainControl(tello_center.Service):
 
         look_at(self.backend, 10, 3.20, 2.1, self.flag)
         self.detect_object(5, hint=(480 - 150, 40, 480 + 150, 360 + 120))
-        time.sleep(2)
 
         goto(self.backend, 2.6, 2.35, 2.4, self.flag)
 
         look_at(self.backend, 7, 2.30, 2.1, self.flag)
         self.detect_object(3, hint=(0, 0, 480 + 80, 360 + 60))
-        time.sleep(2)
 
         goto(self.backend, 3.0, 1.50, 1.7, self.flag, tol=0.35)
 
@@ -188,32 +186,28 @@ class MainControl(tello_center.Service):
         if self.backend.drone.get_state().y - 0.50 < 0.5:
             self.backend.drone.move_backward(0.25)
         self.detect_object(1, hint=(150, 0, 960 - 120*2, 720 - 90*2))
-        time.sleep(2)
 
-        goto(self.backend, 4.6, 0.8, 1.7, self.flag)
+        # goto(self.backend, 4.6, 0.8, 1.7, self.flag)
 
-        look_at(self.backend, 9.1, 0.25, 1.7, self.flag)
-        self.detect_object(2, hint=(100, 0, 480 + 80, 360 + 60))
-        time.sleep(2)
+        # look_at(self.backend, 9.1, 0.25, 1.7, self.flag)
+        # self.detect_object(2, hint=(100, 0, 480 + 80, 360 + 60))
+        # time.sleep(2)
 
         goto(self.backend, 4.6, 0.65, 1.6, self.flag, tol=0.30)
 
         look_at(self.backend, 1, 0.6, 1.7, self.flag)
         self.detect_object(1, hint=(480, 100, 480, 360))
-        time.sleep(2)
 
         goto(self.backend, 4.3, 0.9, 2.5, self.flag)
 
         look_at(self.backend, 4.3, 30, 2.3, self.flag)
         self.detect_object(3)
-        time.sleep(2)
 
         goto(self.backend, 5.0, 1.0, 2.2, self.flag, tol=100)
         goto(self.backend, 5.5, 2.0, 2.45, self.flag, tol=0.35)
 
         look_at(self.backend, -10, 2.0, 2.4, self.flag)
-        self.detect_object(4)
-        time.sleep(2)
+        self.detect_object(3, hint=(40, 0, 960 - 80, 720 - 60))
 
         goto(self.backend, 5.2,  3.4, 1.85, self.flag, tol=0.35)
 
@@ -223,7 +217,7 @@ class MainControl(tello_center.Service):
         goto(self.backend, 4.4, 3.0, 2.45, self.flag, tol=0.3)
 
         look_at(self.backend, 4.3, -3, 2.45, self.flag)
-        self.detect_object(3)
+        self.detect_object(3, hint=(40, 0, 960 - 80, 720 - 60))
 
         goto(self.backend, 6.3, 3.2, 2.2, self.flag, tol=0.3)
 

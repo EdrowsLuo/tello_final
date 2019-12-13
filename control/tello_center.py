@@ -3,6 +3,7 @@ import time
 import threading
 from utils import fps
 import sl4p
+import locks
 
 _services = {}  # type: dict[Service]
 _start_order = []
@@ -169,6 +170,8 @@ class ConfigService(Service):
 
     CONFIG_DEBUG = 'config::debug'
 
+    CONFIG_IMSHOW_FILTER = 'config::imshow_filter'
+
     CONFIG_SERVICE_BLACK_LIST = 'config::service_black_list'
 
     def __init__(self, config=None):
@@ -181,6 +184,8 @@ class ConfigService(Service):
         if config is not None:
             for key in config:
                 self.config[key] = config[key]
+
+
 
     def on_register(self):
         global register_service

@@ -1,7 +1,7 @@
 # coding=utf-8
 from control import tello_center
 from control import tello_abs, tello_image_process, \
-    tello_world, tello_control, tello_yolo, tello_judge_client
+    tello_world, tello_control, tello_yolo, tello_judge_client, tello_imshow
 
 
 def main():
@@ -33,6 +33,7 @@ def main():
     tello_center.register_service(tello_center.PreLoadService(tasks=[
         tello_yolo.YoloService.preload
     ]))
+    tello_center.register_service(tello_imshow.ImshowService())
     tello_center.register_service(tello_abs.TelloBackendService())  # 提供基础控制和数据
     tello_center.register_service(tello_abs.ReactiveImageAndStateService())
     if tello_center.debug():

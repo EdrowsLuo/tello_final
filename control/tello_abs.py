@@ -245,7 +245,7 @@ class MyTello:
             self.print_info("Done!!! sent command: %s to %s"%(command, self.tello_ip))
             return self.log[-1].got_response()
         finally:
-            time.sleep(0.4)
+            time.sleep(0.3)
             self.request_lock.release()
 
     def set_abort_flag(self):

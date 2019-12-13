@@ -41,7 +41,7 @@ class YoloService(tello_center.Service):
         detector = tello_center.get_preloaded(YoloService.PRELOAD_YOLO_DETECTOR)  # type: Detect
         if detector is None:
             raise BaseException('detector not loaded')
-        if w == 0 or h == 0 or True:
+        if w == 0 or h == 0:
             return self.post_detect(img)
         else:
             c = np.copy(img[y:y+h, x:x+w])
@@ -122,6 +122,7 @@ def main():
     tello_center.register_service(YoloService())
     tello_center.start_all_service()
     tello_center.lock_loop()
+
 
 if __name__ == '__main__':
     main()
