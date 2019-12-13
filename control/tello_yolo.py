@@ -100,13 +100,13 @@ class YoloService(tello_center.Service):
             tello_center.lock_loop = override_lock_loop
 
 
-if __name__ == '__main__':
+def main():
     tello_center.register_service(tello_center.ConfigService(config={
         tello_abs.TelloBackendService.CONFIG_STOP: True,
         tello_abs.TelloBackendService.CONFIG_AUTO_WAIT_FOR_START_IMAGE_AND_STATE: True,
 
         YoloService.CONFIG_LOOP_DETECTION: True,
-        YoloService.CONFIG_DETECT_ON_MAIN_THREAD: False,
+        YoloService.CONFIG_DETECT_ON_MAIN_THREAD: True,
 
         # FPS config
         tello_center.FpsRecoder.key(tello_abs.MyTello.KEY_VIDEO_FPS): False,
@@ -122,3 +122,6 @@ if __name__ == '__main__':
     tello_center.register_service(YoloService())
     tello_center.start_all_service()
     tello_center.lock_loop()
+
+if __name__ == '__main__':
+    main()
