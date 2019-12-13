@@ -17,7 +17,7 @@ class Detect(object):
         dir_name: Folder or image_file
     """
 
-    def __init__(self, threshold, weights=None, iou_threshold=0.3, num_class=6, network='efficientdet-d0', size_image=(512, 512)):
+    def __init__(self, threshold, weights=None, iou_threshold=0.3, num_class=6, network='efficientdet-d4', size_image=(512, 512)):
         super(Detect,  self).__init__()
         self.logger = sl4p.Sl4p('my_detect')
         if weights is None:
