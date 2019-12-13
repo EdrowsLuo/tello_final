@@ -170,7 +170,12 @@ class JudgeServerLocal(JudgeServerInterface):
         self.logger.info('seen_fire')
         return
 
+    def send_task_done(self):
+        self.logger.info('done!!!!!!!!!!!!!!!!!')
+        return
+
     def send_target_chest(self, target_idx, chest):
+        return CODE_CONTINUE
         if target_idx != self.next_receive_idx:
             self.logger.info('%d error order %d'%(self.next_receive_idx, target_idx))
             return CODE_ERROR_TARGET

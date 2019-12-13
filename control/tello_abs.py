@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 
 import sl4p
-from stats import Stats
+from control.stats import Stats
 from control.tello_data import TelloData
 from utils.fps import FpsRecoder
 
@@ -239,12 +239,13 @@ class MyTello:
                 diff = now - start
                 if diff > self.MAX_TIME_OUT:
                     self.logger.error("timeout: %s"%command)
-                    raise TimeoutException("[tello] command timeout: " + command)
+                    break
+                    # raise TimeoutException("[tello] command timeout: " + command)
 
             self.print_info("Done!!! sent command: %s to %s"%(command, self.tello_ip))
             return self.log[-1].got_response()
         finally:
-            time.sleep(0.7)
+            time.sleep(0.4)
             self.request_lock.release()
 
     def set_abort_flag(self):

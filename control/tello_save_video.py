@@ -2,7 +2,7 @@
 import threading
 
 import cv2
-
+import locks
 from control import tello_center, tello_abs
 
 
@@ -19,8 +19,7 @@ class SaveVideoService(tello_center.Service):
     def on_new_frame(self, img, state):
         if self.frame is None or self.frame is not img:
             self.frame = img
-            cv2.imshow('frame', self.frame)
-            cv2.waitKey(1)
+            locks.imshow('frame', self.frame)
             self.out.write(self.frame)
 
     def start(self):

@@ -1,10 +1,20 @@
 #!/usr/bin/env python
+import os
+import random
+import shutil
 import time
 from sys import platform
 
+import cv2
+import numpy as np
+import torch
+
 import sl4p
-from image_detecte.models import *
+from image_detecte.models import ONNX_EXPORT, Darknet, load_darknet_weights, load_classes, parse_data_cfg, \
+    scale_coords, plot_one_box, non_max_suppression, scale_coords, plot_one_box
 import threading
+import locks
+from utils import torch_utils
 
 
 class DetectResult:
@@ -14,7 +24,8 @@ class DetectResult:
 
     def __str__(self):
         return "[(x1, y1, x1, y2) = (%d, %d, %d, %d), conf = (%.2f, %.2f), %s\ncolor = %s]" \
-               %(self.x1, self.y1, self.x2, self.y2, self.object_conf, self.class_conf, self.class_name, str(self.color))
+               %(
+               self.x1, self.y1, self.x2, self.y2, self.object_conf, self.class_conf, self.class_name, str(self.color))
 
 
 class ResultCollection:
@@ -40,17 +51,22 @@ class ResultCollection:
             count = 0
             conf = 0
             obj_conf = 0
+            max_conf = 0
             for rs in self.map[ss]:
                 count += 1
                 conf += rs.class_conf
                 obj_conf += rs.object_conf
-            conf = conf / count
-            obj_conf = obj_conf / count
+                if rs.object_conf > max_conf:
+                    max_conf = rs.object_conf
+            conf = conf/count
+            obj_conf = obj_conf/count
             result_collect[ss] = {
+                'name': ss,
                 'call_times': self.call_times,
                 'count': count,
-                'class_conf': float(conf),
-                'object_conf': float(obj_conf)
+                'max_conf': float(max_conf),
+                'object_conf': float(obj_conf),
+                'class_conf': float(conf)
             }
         return result_collect
 
@@ -99,6 +115,7 @@ class Detect:
     def detect(self, img):
         # type: (object) -> list[DetectResult]
         # Initialized  for every detection
+        time.sleep(0.1)
         data = os.path.join(self.main_dir, 'data/fire.data')
         output = os.path.join(self.main_dir, 'data/output')
         img_size = 416
@@ -149,14 +166,14 @@ class Detect:
             result = []
             for x in range(len(det)):
                 result.append(DetectResult(det[x][0], det[x][1], det[x][2], det[x][3],
-                                           det[x][4], det[x][5], int(det[x][6]), classes[int(det[x][6])], colors[int(det[x][6])]))
+                                           det[x][4], det[x][5], int(det[x][6]), classes[int(det[x][6])],
+                                           colors[int(det[x][6])]))
             return result
 
     def draw_result(self, img, det, show=False):
         if det is None or len(det) == 0:
             if show:
-                cv2.imshow('result', img)
-                cv2.waitKey(1)
+                locks.imshow('result', img)
             return
         for det_pack in det:
             xyxy = []
@@ -166,8 +183,7 @@ class Detect:
             label = '%s %.2f %.2f'%(det_pack.class_name, conf, det_pack.object_conf)
             plot_one_box(xyxy, img, label=label, color=det_pack.color)
         if show:
-            cv2.imshow('result', img)
-            cv2.waitKey(1)
+            locks.imshow('result', img)
 
     def letterbox(self, img, new_shape=416, color=(128, 128, 128), mode='auto'):
         # Resize a rectangular image to a 32 pixel multiple rectangle
@@ -205,21 +221,90 @@ class Detect:
         return (img, ratiow, ratioh, dw, dh)
 
 
-if __name__ == '__main__':
-    logger = sl4p.Sl4p("__main__", "1")
-    logger.info("start")
+class Task:
+    def __init__(self, task):
+        self.task = task
+        self.finish = False
+        self.result = None
+
+    def run(self):
+        self.task()
+        self.finish = True
+
+    def invoke_on(self, looper):
+        looper.add_task(self)
+        while not self.finish:
+            time.sleep(0.01)
+        return self.result
+
+
+class DetectImage(Task):
+
+    def __init__(self, detector, img):
+        Task.__init__(self, task=self.detect_img)
+        self.img = img
+        self.detector = detector
+
+    def detect_img(self):
+        self.result = self.detector.detect(self.img)
+
+
+class TaskLoop:
+
+    def __init__(self, flag=None):
+        self.lock = threading.Lock()
+        self.tasks = []
+        if flag is None:
+            def f():
+                return True
+            flag = f
+        self.flag = flag
+
+    def add_task(self, task):
+        self.lock.acquire()
+        try:
+            self.tasks.append(task)
+        finally:
+            self.lock.release()
+
+    def start(self):
+        while self.flag():
+            self.lock.acquire()
+            try:
+                while len(self.tasks) > 0:
+                    self.tasks.pop(0).run()
+            finally:
+                self.lock.release()
+            time.sleep(0.01)
+        for t in self.tasks:
+            t.run()
+
+
+def async_main():
+    loop = TaskLoop()
     detector = Detect(0.1)
-    logger.info("CUDA %s" % str(torch.cuda.is_available()))
-    test_files = [0, 1, 2, 3, 4]
-    for s in test_files:
-        img = cv2.imread('data/samples/%s.jpg' % s)
-        start = time.time()
-        logger.info("start detect %s" % s)
-        result_obj = detector.detect(img)
-        #detector.draw_result(img, result_obj)
-        end = time.time()
-        logger.info("time: " + str(end - start) + "s")
-        for r in result_obj:
-            logger.info(str(r))
+
+    def mm():
+        logger = sl4p.Sl4p("__main__", "1")
+        logger.info("start")
+        logger.info("CUDA %s"%str(torch.cuda.is_available()))
+        test_files = [0, 1, 2, 3, 4]
+        for s in test_files:
+            img = cv2.imread(os.path.join(detector.main_dir, 'data/samples/%s.jpg'%s))
+            start = time.time()
+            logger.info("start detect %s"%s)
+            result_obj = DetectImage(detector, img).invoke_on(loop)
+            # detector.draw_result(img, result_obj)
+            end = time.time()
+            logger.info("time: " + str(end - start) + "s")
+            for r in result_obj:
+                logger.info(str(r))
+
+    t = threading.Thread(target=mm)
+    t.daemon = True
+    t.start()
+    loop.start()
 
 
+if __name__ == '__main__':
+    async_main()

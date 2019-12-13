@@ -1,9 +1,10 @@
 # coding=utf-8
 from control import tello_center
-from control import tello_abs, tello_image_process, tello_panda, \
+from control import tello_abs, tello_image_process, \
     tello_world, tello_control, tello_yolo, tello_judge_client
 
-if __name__ == '__main__':
+
+def main():
     tello_center.register_service(tello_center.ConfigService(config={
         # main config
         tello_center.ConfigService.CONFIG_DEBUG: True,
@@ -14,6 +15,7 @@ if __name__ == '__main__':
 
         # Yolo config
         tello_yolo.YoloService.CONFIG_LOOP_DETECTION: False,
+        tello_yolo.YoloService.CONFIG_DETECT_ON_MAIN_THREAD: True,
 
         # FPS config
         tello_center.FpsRecoder.key(tello_abs.MyTello.KEY_VIDEO_FPS): False,
@@ -45,3 +47,7 @@ if __name__ == '__main__':
     tello_center.register_service(tello_control.MainControl())
     tello_center.start_all_service()
     tello_center.lock_loop()
+
+
+if __name__ == '__main__':
+    main()

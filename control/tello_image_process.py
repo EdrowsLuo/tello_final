@@ -4,10 +4,10 @@ import time
 import cv2
 import numpy as np
 
-from control import tello_center, tello_abs, tello_data, tello_world, tello_panda
+from control import tello_center, tello_abs, tello_data, tello_world
 from image_detecte.redball_detecter import *
 from image_detecte import redball_detecter
-import threading
+import threading, locks
 """
 图形处理
 """
@@ -77,8 +77,7 @@ class ImageProcessService(tello_center.Service):
                     continue
                 if image is not None and state is not None and showimg is not None:
                     self.do_process(image, state, showimg)
-                    cv2.imshow(ImageProcessService.name, showimg)
-                    cv2.waitKey(1)
+                    locks.imshow(ImageProcessService.name, showimg)
             else:
                 time.sleep(0.001)
 
@@ -157,7 +156,7 @@ class FireDetector(ImageHandler):
         ImageHandler.__init__(self)
         self.detectedPos = []
         self.world = tello_center.service_proxy_by_class(tello_world.WorldService)
-        self.panda = tello_center.service_proxy_by_class(tello_panda.PandaService)  # type: tello_panda.PandaService
+        #self.panda = tello_center.service_proxy_by_class(tello_panda.PandaService)  # type: tello_panda.PandaService
         self.preload = tello_center.service_proxy_by_class(tello_center.PreLoadService)  # type:tello_center.PreLoadService
         self.pos_handler = None
 
@@ -213,8 +212,7 @@ class FireDetector(ImageHandler):
                                 thickness=1)
                     if tello_center.get_config(FireDetector.CONFIG_SHOW_POS_MAP, fallback=False):
                         fmap = np.array([206, 300, 3])
-                        cv2.imshow('fire_map', fmap)
-                        cv2.waitKey(1)
+                        locks.imshow('fire_map', fmap)
                     self.preload.put_loaded(FireDetector.PRELOAD_FIRE_POS, np.copy(pos))
                 elif self.pos_handler is not None:
                     self.pos_handler(None)

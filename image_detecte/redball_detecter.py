@@ -75,7 +75,7 @@ def find_red_ball(img):
     for i in range(len(dis)):
         dis[i] = np.linalg.norm(c[0] - contours[max_idx][i])
     # print np.std(dis)
-    if area[max_idx] < 1000 or np.std(dis) > 5:
+    if area[max_idx] < 700 or np.std(dis) > 3:
         return None, None, None, None
     x, y, w, h = cv2.boundingRect(contours[max_idx])
     return x, y, w, h

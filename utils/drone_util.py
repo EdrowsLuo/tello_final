@@ -1,10 +1,32 @@
 from control import tello_abs, tello_data
 from world.world import *
+import sl4p
+
+go_logger = sl4p.Sl4p('__go__')
 
 
 def clamp_abs(v, minv, maxv):
     vv = max(min(abs(v), maxv), minv)
     return vv if v > 0 else (0 if v == 0 else -vv)
+
+
+def find_most_possible_object(collect):
+    poss = []
+    for ss in collect:
+        if collect[ss]['count'] < 6 or collect[ss]['max_conf'] < 0.7 or collect[ss]['object_conf'] < 0.2:
+            continue
+        else:
+            poss.append(collect[ss])
+    if len(poss) == 0:
+        return None
+    if len(poss) == 1:
+        return poss[0]
+    if len(poss) > 1:
+        max_obj = None
+        for s in poss:
+            if max_obj is None or s['object_conf'] > max_obj['object_conf']:
+                max_obj = s
+        return max_obj
 
 
 def go_abs(drone, state: tello_data.TelloData, dis):
@@ -73,14 +95,17 @@ def goto(backend: tello_abs.TelloBackendService, x, y, z, flag, itridx=0, tol=0.
     dis_u = dis[2] / 100.0
     if not flag():
         return
-    if dis_f > 0.25 or abs(dis_u) > 0.15:
+    if dis_f > 0.15 or abs(dis_u) > 0.15:
+        if abs(dis_u) > 0.15:
+            sign = -1 if dis_u < 0 else 1
+            dis_u = sign * max(0.2, abs(dis_u))
         backend.drone.go(dis_f, 0, dis_u)
         state = backend.drone.get_state()
         if state.mid != -1:
             dis = vec3(x, y, z)*100 - vec3(state.x, state.y, state.z)
-            dis[2] *= 1.5
+            dis[2] *= 2
             dis = np.linalg.norm(dis/100.0)
-            print("dis %.2f" % dis)
+            go_logger.info("dis %.2f" % dis)
             if dis > tol:
                 goto(backend, x, y, z, flag, itridx=itridx + 1, tol=tol)
 
