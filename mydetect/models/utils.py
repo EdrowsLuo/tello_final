@@ -303,7 +303,8 @@ url_map = {
 
 def load_pretrained_weights(model, model_name, load_fc=True):
     """ Loads pretrained weights, and downloads if loading for the first time. """
-    state_dict = model_zoo.load_url(url_map[model_name])
+    dirname, _ = os.path.split(os.path.abspath(__file__))
+    state_dict = model_zoo.load_url(url_map[model_name], dirname)
     if load_fc:
         model.load_state_dict(state_dict)
     else:
