@@ -20,8 +20,21 @@ target_id = [-1, -1, -1]
 
 app = Flask(__name__)
 
+
+@app.route('/reset')
+def reset():
+    state_fail = 0
+    state_received = 0
+    state_receivedtarget1 = 0
+    state_receivedtarget2 = 0
+    state_receivedtarget3 = 0
+    target_id = [-1, -1, -1]
+    return ''
+
+
 @app.route('/takeoff')
 def sent_takeoff():
+    print('takeoff')
     takeoff_pub.publish(1)
     return ''
 
@@ -130,7 +143,7 @@ def target3_handle(data):
 
 if __name__ == '__main__':
     rospy.init_node('control', anonymous=False)
-    groupid = '/' + str(GROUP_INDEX)
+    groupid = '/group' + str(GROUP_INDEX)
 
     takeoff_pub = rospy.Publisher(groupid + '/takeoff', Int16, queue_size=3)
     seenfire_pub = rospy.Publisher(groupid + '/seenfire', Int16, queue_size=3)

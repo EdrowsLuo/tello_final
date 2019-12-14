@@ -75,7 +75,7 @@ class MainControl(tello_center.Service):
                 self.judge.server.takeoff()
                 self.backend.drone.takeoff()
                 #self.backend.drone.go(0, 0, 0.6)
-                self.backend.drone.go(0.5, -1.2, 0.6)
+                self.backend.drone.go(0.6, -1.0, 0.6)
                 #self.backend.drone.go(0, 0, 0.6)
                 #self.backend.drone.rotate_ccw(90)
                 #look_at(self.backend, )
@@ -134,7 +134,7 @@ class MainControl(tello_center.Service):
                 #down
 
             if abs(ry) > 10:
-                dis = max(min(abs(ry), 40), 23)/100.0
+                dis = max(min(abs(ry), 40), 22)/100.0
                 if ry < 0:
                     my = -dis
                     #self.backend.drone.move_left(dis)
@@ -165,7 +165,7 @@ class MainControl(tello_center.Service):
                     self.backend.drone.move_up(max(min(180 - state.z, 50), 22)/100.0)
             else:
                 self.backend.drone.move_right(0.5)
-                if 170 < state.y + 50 < 230:
+                if 160 < state.y + 50 < 240:
                     self.backend.drone.move_right(0.8)
 
     def step2(self):
@@ -237,7 +237,7 @@ class MainControl(tello_center.Service):
 
         goto(self.backend, 7.5, 1.7, 1.7, self.flag, tol=0.3)
 
-        look_at(self.backend, 6.5, 0, 1.7, self.flag)
+        look_at(self.backend, 6.5, 0, 1.6, self.flag)
         self.detect_object(2, hint=(0, 0, 480 + 120, 360 + 90))
 
         goto(self.backend, 7.5, 2.0, 2.0, self.flag)

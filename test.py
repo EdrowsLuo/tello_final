@@ -1,6 +1,21 @@
+import sys
+sys.path.remove("/opt/ros/kinetic/lib/python2.7/dist-packages")
 from control.tello_judge_client import *
+from image_detecte import detect
+from control import tello_yolo
+import threading
+
 
 if __name__ == '__main__':
+    # detect.main()
+    # exit()
+    #t = threading.Thread(target=detect.main)
+    #t.daemon = True
+    #t.start()
+    tello_yolo.main()
+    #detect.async_main()
+    exit()
+
     logger = sl4p.Sl4p('__main__')
     tello_center.register_service(JudgeClientService())
     tello_center.register_service(JudgeServerOverHttp())

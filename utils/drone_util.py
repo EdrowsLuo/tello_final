@@ -1,6 +1,7 @@
-from control import tello_abs, tello_data
+from control import tello_abs, tello_data, tello_judge_client
 from world.world import *
 import sl4p
+import numpy as np
 
 go_logger = sl4p.Sl4p('__go__')
 
@@ -13,7 +14,7 @@ def clamp_abs(v, minv, maxv):
 def find_most_possible_object(collect):
     poss = []
     for ss in collect:
-        if collect[ss]['count'] < 6 or collect[ss]['max_conf'] < 0.7 or collect[ss]['object_conf'] < 0.2:
+        if collect[ss]['count'] < 6 or collect[ss]['max_conf'] < 0.84 or collect[ss]['object_conf'] < 0.4:
             continue
         else:
             poss.append(collect[ss])
@@ -68,7 +69,49 @@ def look_at(backend: tello_abs.TelloBackendService, x, y, z, flag):
         return
 
 
-def goto(backend: tello_abs.TelloBackendService, x, y, z, flag, itridx=0, tol=0.45):
+def goto_new(backend: tello_abs.TelloBackendService, x, y, z, flag, itridx=0, tol=0.45):
+    if itridx >= 5:
+        return
+    while True:
+        if not flag():
+            return
+        state = backend.drone.get_state()
+        if state.mid == -1:
+            backend.drone.move_up(0.3)
+        else:
+            break
+    if not flag():
+        return
+    state = backend.drone.get_state()
+    dis = vec3(x, y, z)*100 - vec3(state.x, state.y, state.z)
+    ang = state.mpry[1]
+    dis[0], dis[1] = dis[0] * np.cos(ang) + dis[1] * np.sin(ang), dis[0] * np.sin(ang) - dis[1] * np.cos(ang)
+    if abs(dis[0]) > 11 or abs(dis[1]) > 11 or abs(dis[2]) > 11:
+        if abs(dis[0]) > 11:
+            s = -1 if dis[0] < 0 else 1
+            dis[0] = s * max(20.0, abs(dis[0]))
+        if abs(dis[1]) > 11:
+            s = -1 if dis[1] < 0 else 1
+            dis[1] = s * max(20.0, abs(dis[1]))
+        if abs(dis[2]) > 11:
+            s = -1 if dis[0] < 0 else 1
+            dis[2] = s * max(20.0, abs(dis[2]))
+
+        dis = dis / 100.0
+        backend.drone.go(dis[0], dis[1], dis[2])
+
+        state = backend.drone.get_state()
+        if state.mid == -1:
+            return
+        dis = vec3(x, y, z)*100 - vec3(state.x, state.y, state.z)
+        dis = dis / 100.0
+        l = float(np.linalg.norm(dis))
+        go_logger.info('dis %s' % l)
+        if l > tol:
+            goto_new(backend, x, y, z, flag, itridx=itridx + 1)
+
+
+def goto_old(backend: tello_abs.TelloBackendService, x, y, z, flag, itridx=0, tol=0.45):
     if itridx >= 5:
         return
     while True:
@@ -107,7 +150,10 @@ def goto(backend: tello_abs.TelloBackendService, x, y, z, flag, itridx=0, tol=0.
             dis = np.linalg.norm(dis/100.0)
             go_logger.info("dis %.2f" % dis)
             if dis > tol:
-                goto(backend, x, y, z, flag, itridx=itridx + 1, tol=tol)
+                goto_old(backend, x, y, z, flag, itridx=itridx + 1, tol=tol)
+
+
+goto = goto_old
 
 
 if __name__ == '__main__':

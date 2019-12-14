@@ -16,6 +16,7 @@ class YoloService(tello_center.Service):
     CONFIG_LOOP_DETECTION = 'yolo::loop_detection'
     CONFIG_DETECT_ON_MAIN_THREAD = 'yolo::CONFIG_DETECT_ON_MAIN_THREAD'
     CONFIG_USE_YOLO = 'yolo::CONFIG_USE_YOLO'
+    CONFIG_YOLO_WEIGHTS = 'yolo::CONFIG_YOLO_WEIGHTS'
 
     def __init__(self):
         tello_center.Service.__init__(self)
@@ -26,7 +27,8 @@ class YoloService(tello_center.Service):
     @staticmethod
     def preload(service: tello_center.PreLoadService):
         if tello_center.get_config(YoloService.CONFIG_USE_YOLO, fallback=True):
-            service.put_loaded(YoloService.PRELOAD_YOLO_DETECTOR, Detect(0.1))
+            weights = tello_center.get_config(YoloService.CONFIG_YOLO_WEIGHTS, fallback='fire_new_1207.pt')
+            service.put_loaded(YoloService.PRELOAD_YOLO_DETECTOR, Detect(0.1, weights=weights))
         else:
             service.put_loaded(YoloService.PRELOAD_YOLO_DETECTOR, detect.Detect(0.1))
 
@@ -107,6 +109,7 @@ def main():
 
         YoloService.CONFIG_LOOP_DETECTION: True,
         YoloService.CONFIG_DETECT_ON_MAIN_THREAD: True,
+        YoloService.CONFIG_YOLO_WEIGHTS: 'fire_89.pt',
 
         # FPS config
         tello_center.FpsRecoder.key(tello_abs.MyTello.KEY_VIDEO_FPS): False,
@@ -117,8 +120,8 @@ def main():
         YoloService.preload
     ]))
     tello_center.register_service(tello_abs.TelloBackendService())  # 提供基础控制和数据
-    tello_center.register_service(tello_abs.ReactiveImageAndStateService())
-    tello_center.register_service(tello_image_process.ImageProcessService())
+    # tello_center.register_service(tello_abs.ReactiveImageAndStateService())
+    # tello_center.register_service(tello_image_process.ImageProcessService())
     tello_center.register_service(YoloService())
     tello_center.start_all_service()
     tello_center.lock_loop()

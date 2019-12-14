@@ -34,6 +34,8 @@ class ResultCollection:
         self.call_times = 0
 
     def add_result(self, result: DetectResult):
+        if result.object_conf < 0.25:
+            return
         if result.class_name not in self.map:
             self.map[result.class_name] = []
         self.map[result.class_name].append(result)
@@ -72,12 +74,12 @@ class ResultCollection:
 
 
 class Detect:
-    def __init__(self, conf):
+    def __init__(self, conf, weights='fire_new_1207.pt'):
         # Initialize this once
         main_dir = os.path.split(os.path.abspath(__file__))[0]
         self.main_dir = main_dir
         cfg = os.path.join(main_dir, 'cfg/yolov3.cfg')
-        weights = os.path.join(main_dir, 'weights/fire_new_1207.pt')
+        weights = os.path.join(main_dir, 'weights/%s' % weights)
         output = os.path.join(main_dir, 'data/output')
         img_size = 416
         self.conf_thres = conf
@@ -251,6 +253,7 @@ class DetectImage(Task):
         try:
             self.result = self.detector.detect(self.img)
         except RuntimeError:
+            time.sleep(0.3)
             self.detect_img(idx=idx + 1)
 
 

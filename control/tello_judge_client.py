@@ -96,6 +96,9 @@ class JudgeServerOverHttp(JudgeServerInterface):
         self.logger = sl4p.Sl4p('judge_http')
         self.base = 'http://127.0.0.1:5000'
 
+    def start(self):
+        requests.get(self.base + '/reset')
+
     def takeoff(self):
         self.logger.info('takeoff')
         requests.get(self.base + '/takeoff')
@@ -207,6 +210,7 @@ class JudgeClientService(tello_center.Service):
         tello_center.Service.__init__(self)
         self.server = tello_center.service_proxy_by_class(JudgeServerInterface)  # type: JudgeServerInterface
         self.targets = None
+        self.targets_idx = {}
         self.fail = False
         self.chest_info = {
             1: JudgeClientService.ChestInfo(1),
@@ -217,19 +221,17 @@ class JudgeClientService(tello_center.Service):
         }
 
     def update_chest_info(self):
-        if self.fail:
-            return CODE_ERROR_TARGET
+        # if self.fail:
+        #     return CODE_ERROR_TARGET
         if len(self.targets) == 0:
             return CODE_TASK_DONE
-        target_idx = 4 - len(self.targets)
-        target_object_idx = self.targets[0]
         for c in self.chest_info:
             chest = self.chest_info[c]
             if chest.obj_name is None:
                 continue
             object_idx = name2id[chest.obj_name]
-            if target_object_idx == object_idx:
-                r = self.server.send_target_chest(target_idx, chest.idx)
+            if object_idx in self.targets:
+                r = self.server.send_target_chest(self.targets_idx[object_idx], chest.idx)
                 if r == CODE_ERROR_TARGET:
                     self.fail = True
                     return CODE_ERROR_TARGET
@@ -247,6 +249,8 @@ class JudgeClientService(tello_center.Service):
         """
         if self.targets is None:
             self.targets = self.server.get_targets()
+            for i in range(len(self.targets)):
+                self.targets_idx[self.targets[i]] = i + 1
 
         self.chest_info[chest_idx].obj_name = obj_name
         return self.update_chest_info()
