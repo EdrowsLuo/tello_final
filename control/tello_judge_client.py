@@ -96,7 +96,7 @@ class JudgeServerOverHttp(JudgeServerInterface):
         self.logger = sl4p.Sl4p('judge_http')
         self.base = 'http://127.0.0.1:5000'
 
-    def request(self, url, print_logger=True):
+    def request(self, url):
         self.logger.info('[get] %s' % url)
         return requests.get(url)
 
@@ -108,7 +108,7 @@ class JudgeServerOverHttp(JudgeServerInterface):
         self.request(self.base + '/takeoff')
         start_time = time.time()
         while True:
-            can_take_off = int(self.request(self.base + '/can/takeoff', print_logger=False).content)
+            can_take_off = int(self.request(self.base + '/can/takeoff').content)
             if can_take_off == 1:
                 return
             if time.time() - start_time > 20:
