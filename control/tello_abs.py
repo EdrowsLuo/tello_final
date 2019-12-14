@@ -52,7 +52,7 @@ class MyTello:
         self.last_frame = None
 
         self.log = []
-        self.MAX_TIME_OUT = 10.0
+        self.MAX_TIME_OUT = 5.0
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # socket for sending cmd
 
@@ -214,7 +214,7 @@ class MyTello:
             except BaseException as exc:
                 self.logger.error("Caught exception : %s"%exc)
 
-    def send_command(self, command):
+    def send_command(self, command, timeout=None):
         """
         Send a command to the Tello and wait for a response.
 
@@ -222,6 +222,9 @@ class MyTello:
         :return (str): Response from Tello.
 
         """
+        if timeout is None:
+            timeout = self.MAX_TIME_OUT
+
         self.print_info("command: %s"%str(command))
         if self.stop:
             time.sleep(0.1)
@@ -237,7 +240,7 @@ class MyTello:
             while not self.log[-1].got_response():
                 now = time.time()
                 diff = now - start
-                if diff > self.MAX_TIME_OUT:
+                if diff > timeout:
                     self.logger.error("timeout: %s"%command)
                     break
                     # raise TimeoutException("[tello] command timeout: " + command)
@@ -269,7 +272,7 @@ class MyTello:
 
         """
         self.has_takeoff = True
-        return self.send_command('takeoff')
+        return self.send_command('takeoff', timeout=10.0)
 
     def set_speed(self, speed):
         """

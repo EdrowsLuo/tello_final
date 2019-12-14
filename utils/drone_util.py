@@ -14,7 +14,7 @@ def clamp_abs(v, minv, maxv):
 def find_most_possible_object(collect):
     poss = []
     for ss in collect:
-        if collect[ss]['count'] < 6 or collect[ss]['max_conf'] < 0.75 or collect[ss]['object_conf'] < 0.4:
+        if collect[ss]['count'] < 6 or collect[ss]['max_conf'] < 0.80 or collect[ss]['object_conf'] < 0.4:
             continue
         else:
             poss.append(collect[ss])

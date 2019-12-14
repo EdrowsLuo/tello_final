@@ -37,10 +37,6 @@ def reset():
 def sent_takeoff():
     print('takeoff')
     takeoff_pub.publish(1)
-    time.sleep(0.01)
-    takeoff_pub.publish(1)
-    time.sleep(0.01)
-    takeoff_pub.publish(1)
     return ''
 
 @app.route('/can/takeoff')
@@ -49,10 +45,6 @@ def can_takeoff():
 
 @app.route('/seen/fire')
 def seen_fire():
-    seenfire_pub.publish(1)
-    time.sleep(0.01)
-    seenfire_pub.publish(1)
-    time.sleep(0.01)
     seenfire_pub.publish(1)
     return ''
 
@@ -63,10 +55,6 @@ def send_target_chest():
     print('idx: %d chest: %d' % (target_idx, chest))
     if target_idx == 1:
         tgt1_pub.publish(chest)
-        time.sleep(0.01)
-        tgt1_pub.publish(chest)
-        time.sleep(0.01)
-        tgt1_pub.publish(chest)
         if state_fail:
             return CODE_ERROR_TARGET
         while not state_receivedtarget1:
@@ -76,10 +64,6 @@ def send_target_chest():
         return CODE_CONTINUE
     if target_idx == 2:
         tgt2_pub.publish(chest)
-        time.sleep(0.01)
-        tgt2_pub.publish(chest)
-        time.sleep(0.01)
-        tgt2_pub.publish(chest)
         if state_fail:
             return CODE_ERROR_TARGET
         while not state_receivedtarget2:
@@ -88,10 +72,6 @@ def send_target_chest():
             time.sleep(0.01)
         return CODE_CONTINUE
     if target_idx == 3:
-        tgt3_pub.publish(chest)
-        time.sleep(0.01)
-        tgt3_pub.publish(chest)
-        time.sleep(0.01)
         tgt3_pub.publish(chest)
         if state_fail:
             return CODE_ERROR_TARGET
@@ -112,10 +92,6 @@ def get_targets():
 
 @app.route('/task/done')
 def task_done():
-    done_pub.publish(1)
-    time.sleep(0.01)
-    done_pub.publish(1)
-    time.sleep(0.01)
     done_pub.publish(1)
     return ''
 
@@ -168,7 +144,7 @@ def target3_handle(data):
 
 
 if __name__ == '__main__':
-    rospy.init_node('control', anonymous=False)
+    rospy.init_node('control', anonymous=True)
     groupid = '/group' + str(GROUP_INDEX)
 
     takeoff_pub = rospy.Publisher(groupid + '/takeoff', Int16, queue_size=3)

@@ -253,7 +253,7 @@ class MainControl(tello_center.Service):
         self.detect_object(2)
 
         goto(self.backend, 7.3, 1.0, 2.2, self.flag, tol=0.3)
-        
+
         look_at(self.backend, 6.3, 4.0, 2.2, self.flag)
         self.detect_object(4)
 
