@@ -51,6 +51,7 @@ class MainControl(tello_center.Service):
         self.stage_wait_for_start = Stage('wait_for_start', func_do=self.wait_for_start)
         self.stage_find_fire = Stage('find_fire', func_do=self.search_fire)
         self.found_fire = None
+        self.search_min = True
 
         self.stage_go_to_step2_start_pos = Stage('step2', func_do=self.step2)
 
@@ -74,8 +75,9 @@ class MainControl(tello_center.Service):
                 self.logger.info("takeoff")
                 self.judge.server.takeoff()
                 self.backend.drone.takeoff()
-                #self.backend.drone.go(0, 0, 0.6)
+                # self.backend.drone.go(0, 0, 0.6)
                 self.backend.drone.go(0.6, -1.0, 0.6)
+
                 #self.backend.drone.go(0, 0, 0.6)
                 #self.backend.drone.rotate_ccw(90)
                 #look_at(self.backend, )
@@ -99,7 +101,7 @@ class MainControl(tello_center.Service):
 
     def search_fire(self):
         image, state = self.backend.drone.get_image_and_state()  # type: object, tello_data.TelloData
-        if state.mid != -1:
+        if state.mid != -1 and False:
             if abs(state.mpry[1]) > 8 and not 150 < state.y + 50 < 250:
                 if state.mpry[0] > 0:
                     self.backend.drone.rotate_ccw(state.mpry[0])
@@ -156,36 +158,51 @@ class MainControl(tello_center.Service):
             if state.mid == -1:
                 self.backend.drone.move_up(0.5)
                 self.backend.drone.move_right(0.2)
-            elif state.x > 70:
-                self.backend.drone.move_backward(max(state.x > 70, 25)/100.0)
-            elif abs(state.z - 180) > 15:
-                if state.z > 180:
-                    self.backend.drone.move_down(max(min(state.z - 180, 50), 22)/100.0)
-                else:
-                    self.backend.drone.move_up(max(min(180 - state.z, 50), 22)/100.0)
             else:
-                self.backend.drone.move_right(0.5)
-                if 160 < state.y + 50 < 240:
-                    self.backend.drone.move_right(0.8)
+                v1 = vec3(state.x, state.y, state.z)/100.0 - vec3(0.6, 0.9, 1.8)
+                v2 = vec3(state.x, state.y, state.z)/100.0 - vec3(0.6, 2.9, 1.8)
+                l1 = np.linalg.norm(v1)
+                l2 = np.linalg.norm(v2)
+                if self.search_min and l1 < l2:
+                    goto(self.backend, 0.6, 0.9, 1.8, self.flag, tol=0.25)
+                    look_at(self.backend, 10000, 0, 0, self.flag)
+                else:
+                    goto(self.backend, 0.6, 2.9, 1.8, self.flag, tol=0.25)
+                    look_at(self.backend, 10000, 0, 0, self.flag)
+                self.search_min = not self.search_min
+
+
+
+            # elif state.x > 70:
+            #    self.backend.drone.move_backward(max(state.x > 70, 25)/100.0)
+            # elif abs(state.z - 180) > 15:
+            #     if state.z > 180:
+            #         self.backend.drone.move_down(max(min(state.z - 180, 50), 22)/100.0)
+            #     else:
+            #         self.backend.drone.move_up(max(min(180 - state.z, 50), 22)/100.0)
+            # else:
+            #     self.backend.drone.move_right(0.5)
+            #     if 160 < state.y + 50 < 240:
+            #        self.backend.drone.move_right(0.8)
 
     def step2(self):
 
         goto(self.backend, 2.7, 3.2, 2.05, self.flag, tol=0.30)
 
         look_at(self.backend, 10, 3.20, 2.1, self.flag)
-        self.detect_object(5, hint=(480 - 150, 40, 480 + 150, 360 + 120))
+        self.detect_object(5)
 
         goto(self.backend, 2.6, 2.35, 2.4, self.flag)
 
         look_at(self.backend, 7, 2.30, 2.1, self.flag)
-        self.detect_object(3, hint=(0, 0, 480 + 80, 360 + 60))
+        self.detect_object(3)
 
         goto(self.backend, 3.0, 1.50, 1.7, self.flag, tol=0.35)
 
         look_at(self.backend, 3.0, -2.0, 1.65, self.flag)
         if self.backend.drone.get_state().y - 0.50 < 0.5:
             self.backend.drone.move_backward(0.25)
-        self.detect_object(1, hint=(150, 0, 960 - 120*2, 720 - 90*2))
+        self.detect_object(1)
 
         # goto(self.backend, 4.6, 0.8, 1.7, self.flag)
 
@@ -196,7 +213,7 @@ class MainControl(tello_center.Service):
         goto(self.backend, 4.6, 0.65, 1.6, self.flag, tol=0.30)
 
         look_at(self.backend, 1, 0.6, 1.7, self.flag)
-        self.detect_object(1, hint=(480, 100, 480, 360))
+        self.detect_object(1)
 
         goto(self.backend, 4.3, 0.9, 2.5, self.flag)
 
@@ -207,7 +224,7 @@ class MainControl(tello_center.Service):
         goto(self.backend, 5.5, 2.0, 2.45, self.flag, tol=0.35)
 
         look_at(self.backend, -10, 2.0, 2.4, self.flag)
-        self.detect_object(3, hint=(40, 0, 960 - 80, 720 - 60))
+        self.detect_object(3)
 
         goto(self.backend, 5.2,  3.4, 1.85, self.flag, tol=0.35)
 
@@ -217,28 +234,28 @@ class MainControl(tello_center.Service):
         goto(self.backend, 4.4, 3.0, 2.45, self.flag, tol=0.3)
 
         look_at(self.backend, 4.3, -3, 2.45, self.flag)
-        self.detect_object(3, hint=(40, 0, 960 - 80, 720 - 60))
+        self.detect_object(3)
 
         goto(self.backend, 6.3, 3.2, 2.2, self.flag, tol=0.3)
 
         look_at(self.backend, 6.3, -2, 2.2, self.flag)
-        self.detect_object(4, hint=(40, 0, 960 - 80, 720 - 60))
+        self.detect_object(4)
 
-        goto(self.backend, 7.1, 3.1, 2.2, self.flag, tol=1000)
-        goto(self.backend, 7.3, 2.0, 2.2, self.flag, tol=0.3)
+        goto(self.backend, 7.4, 3.1, 2.2, self.flag, tol=1000)
+        goto(self.backend, 7.5, 2.0, 2.2, self.flag, tol=0.3)
 
-        look_at(self.backend, -10, 2.0, 2.2, self.flag)
+        look_at(self.backend, 1, 2.0, 2.2, self.flag)
         self.detect_object(4)
 
         goto(self.backend, 7.4, 0.8, 1.7, self.flag, tol=0.3)
 
         look_at(self.backend, 0, 0.25, 1.7, self.flag)
-        self.detect_object(2, hint=(440, 100, 480 + 40, 360 + 30))
+        self.detect_object(2)
 
         goto(self.backend, 7.5, 1.7, 1.7, self.flag, tol=0.3)
 
         look_at(self.backend, 6.5, 0, 1.6, self.flag)
-        self.detect_object(2, hint=(0, 0, 480 + 120, 360 + 90))
+        self.detect_object(2, hint=(80, 60, 960 - 160, 720 - 120))
 
         goto(self.backend, 7.5, 2.0, 2.0, self.flag)
         look_at(self.backend, 1000, 0, 0, self.flag)

@@ -96,32 +96,35 @@ class JudgeServerOverHttp(JudgeServerInterface):
         self.logger = sl4p.Sl4p('judge_http')
         self.base = 'http://127.0.0.1:5000'
 
+    def request(self, url):
+        self.logger.info('[get] %s' % url)
+        return requests.get(url)
+
     def start(self):
-        requests.get(self.base + '/reset')
+        self.request(self.base + '/reset')
 
     def takeoff(self):
         self.logger.info('takeoff')
-        requests.get(self.base + '/takeoff')
+        self.request(self.base + '/takeoff')
         start_time = time.time()
         while True:
-            can_take_off = int(requests.get(self.base + '/can/takeoff').content)
+            can_take_off = int(self.request(self.base + '/can/takeoff').content)
             if can_take_off == 1:
                 return
             if time.time() - start_time > 20:
                 raise BaseException('Timeout!')
 
     def seen_fire(self):
-        self.logger.info('seen_fire')
-        requests.get(self.base + '/seen/fire')
+        self.request(self.base + '/seen/fire')
 
     def send_target_chest(self, target_idx, chest):
-        return int(requests.get(self.base + '/send/target/chest?id=%d&chest=%d'%(target_idx, chest)).content)
+        return int(self.request(self.base + '/send/target/chest?id=%d&chest=%d'%(target_idx, chest)).content)
 
     def send_task_done(self):
-        requests.get(self.base + '/task/done')
+        self.request(self.base + '/task/done')
 
     def get_targets(self):
-        ts = requests.get(self.base + '/get/targets').content
+        ts = self.request(self.base + '/get/targets').content
         ts = ts.split(b' ')
         rqs = []
         for s in ts:
@@ -232,12 +235,8 @@ class JudgeClientService(tello_center.Service):
             object_idx = name2id[chest.obj_name]
             if object_idx in self.targets:
                 r = self.server.send_target_chest(self.targets_idx[object_idx], chest.idx)
-                if r == CODE_ERROR_TARGET:
-                    self.fail = True
-                    return CODE_ERROR_TARGET
-                else:
-                    self.targets.pop(0)
-                    return self.update_chest_info()
+                self.targets.remove(object_idx)
+                return self.update_chest_info()
         return CODE_CONTINUE
 
     def put_chest_info(self, chest_idx, obj_name):

@@ -16,6 +16,7 @@ def main():
         # Yolo config
         tello_yolo.YoloService.CONFIG_LOOP_DETECTION: False,
         tello_yolo.YoloService.CONFIG_DETECT_ON_MAIN_THREAD: True,
+        tello_yolo.YoloService.CONFIG_USE_YOLO: False,
 
         # FPS config
         tello_center.FpsRecoder.key(tello_abs.MyTello.KEY_VIDEO_FPS): False,

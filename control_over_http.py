@@ -23,6 +23,7 @@ app = Flask(__name__)
 
 @app.route('/reset')
 def reset():
+    global state_fail, state_received, state_receivedtarget1, state_receivedtarget2, state_receivedtarget3, target_id
     state_fail = 0
     state_received = 0
     state_receivedtarget1 = 0
@@ -36,6 +37,10 @@ def reset():
 def sent_takeoff():
     print('takeoff')
     takeoff_pub.publish(1)
+    time.sleep(0.01)
+    takeoff_pub.publish(1)
+    time.sleep(0.01)
+    takeoff_pub.publish(1)
     return ''
 
 @app.route('/can/takeoff')
@@ -45,13 +50,22 @@ def can_takeoff():
 @app.route('/seen/fire')
 def seen_fire():
     seenfire_pub.publish(1)
+    time.sleep(0.01)
+    seenfire_pub.publish(1)
+    time.sleep(0.01)
+    seenfire_pub.publish(1)
     return ''
 
 @app.route('/send/target/chest')
 def send_target_chest():
     target_idx = int(request.args.get('id'))
     chest = int(request.args.get('chest'))
-    if target_id == 1:
+    print('idx: %d chest: %d' % (target_idx, chest))
+    if target_idx == 1:
+        tgt1_pub.publish(chest)
+        time.sleep(0.01)
+        tgt1_pub.publish(chest)
+        time.sleep(0.01)
         tgt1_pub.publish(chest)
         if state_fail:
             return CODE_ERROR_TARGET
@@ -60,7 +74,11 @@ def send_target_chest():
                 return CODE_ERROR_TARGET
             time.sleep(0.01)
         return CODE_CONTINUE
-    if target_id == 2:
+    if target_idx == 2:
+        tgt2_pub.publish(chest)
+        time.sleep(0.01)
+        tgt2_pub.publish(chest)
+        time.sleep(0.01)
         tgt2_pub.publish(chest)
         if state_fail:
             return CODE_ERROR_TARGET
@@ -69,7 +87,11 @@ def send_target_chest():
                 return CODE_ERROR_TARGET
             time.sleep(0.01)
         return CODE_CONTINUE
-    if target_id == 3:
+    if target_idx == 3:
+        tgt3_pub.publish(chest)
+        time.sleep(0.01)
+        tgt3_pub.publish(chest)
+        time.sleep(0.01)
         tgt3_pub.publish(chest)
         if state_fail:
             return CODE_ERROR_TARGET
@@ -90,6 +112,10 @@ def get_targets():
 
 @app.route('/task/done')
 def task_done():
+    done_pub.publish(1)
+    time.sleep(0.01)
+    done_pub.publish(1)
+    time.sleep(0.01)
     done_pub.publish(1)
     return ''
 
@@ -160,4 +186,4 @@ if __name__ == '__main__':
     rospy.Subscriber(groupid + '/target1', Int16, target1_handle)
     rospy.Subscriber(groupid + '/target2', Int16, target2_handle)
     rospy.Subscriber(groupid + '/target3', Int16, target3_handle)
-    app.run(port=5000)
+    app.run(port=5000, debug=True)

@@ -15,6 +15,9 @@ class CameraModel:
         return nm(vec3(r[0], self.dis, -r[1]) / 100.0)
 
 
+predata = None
+
+
 class TelloData:
     camera = CameraModel(960, 720, 45.0 / 180.0 * np.pi)
     cameraMatrix = hpr2matrix(vec3(0, -12, 0) / 180.0 * np.pi)

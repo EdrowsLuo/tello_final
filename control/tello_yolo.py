@@ -110,6 +110,7 @@ def main():
         YoloService.CONFIG_LOOP_DETECTION: True,
         YoloService.CONFIG_DETECT_ON_MAIN_THREAD: True,
         YoloService.CONFIG_YOLO_WEIGHTS: 'fire_89.pt',
+        YoloService.CONFIG_USE_YOLO: False,
 
         # FPS config
         tello_center.FpsRecoder.key(tello_abs.MyTello.KEY_VIDEO_FPS): False,

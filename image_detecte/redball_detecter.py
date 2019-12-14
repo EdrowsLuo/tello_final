@@ -39,20 +39,24 @@ def solve_system(d, b, a, x_scale, x1, x2, dis):
 
     return __y, __dis_y, __det_y
 
+
 def find_red_ball(img):
     kernel_4 = np.ones((4, 4), np.uint8)  # 4x4的卷积核
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
     # 创建mask
-    mask = cv2.inRange(hsv, np.array([156, 100, 100]), np.array([180, 255, 255]))
-    mask2 = cv2.inRange(hsv, np.array([0, 100, 100]), np.array([10, 255, 255]))
+    mask = cv2.inRange(hsv, np.array([156, 100, 80]), np.array([180, 255, 255]))
+    mask2 = cv2.inRange(hsv, np.array([0, 100, 80]), np.array([10, 255, 255]))
     mask = cv2.bitwise_or(mask, mask2)
 
     # 后处理mask
-    erosion = cv2.erode(mask, kernel_4, iterations=1)
-    erosion = cv2.erode(erosion, kernel_4, iterations=1)
-    dilation = cv2.dilate(erosion, kernel_4, iterations=1)
-    dilation = cv2.dilate(dilation, kernel_4, iterations=1)
+    erosion = cv2.erode(mask, kernel_4, iterations=2)
+    #erosion = cv2.erode(erosion, kernel_4, iterations=1)
+    dilation = cv2.dilate(erosion, kernel_4, iterations=2)
+    #dilation = cv2.dilate(dilation, kernel_4, iterations=1)
+
+    # cv2.imshow('red', dilation)
+    # cv2.waitKey(1)
 
     # 寻找轮廓
     v = cv2.findContours(dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -75,7 +79,7 @@ def find_red_ball(img):
     for i in range(len(dis)):
         dis[i] = np.linalg.norm(c[0] - contours[max_idx][i])
     # print np.std(dis)
-    if area[max_idx] < 700 or np.std(dis) > 3:
+    if area[max_idx] < 700 or np.std(dis) > 8:
         return None, None, None, None
     x, y, w, h = cv2.boundingRect(contours[max_idx])
     return x, y, w, h

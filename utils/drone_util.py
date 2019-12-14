@@ -14,7 +14,7 @@ def clamp_abs(v, minv, maxv):
 def find_most_possible_object(collect):
     poss = []
     for ss in collect:
-        if collect[ss]['count'] < 6 or collect[ss]['max_conf'] < 0.84 or collect[ss]['object_conf'] < 0.4:
+        if collect[ss]['count'] < 6 or collect[ss]['max_conf'] < 0.75 or collect[ss]['object_conf'] < 0.4:
             continue
         else:
             poss.append(collect[ss])
@@ -83,25 +83,29 @@ def goto_new(backend: tello_abs.TelloBackendService, x, y, z, flag, itridx=0, to
     if not flag():
         return
     state = backend.drone.get_state()
+    prestate = state
     dis = vec3(x, y, z)*100 - vec3(state.x, state.y, state.z)
-    ang = state.mpry[1]
+    ang = state.mpry[1] / 180.0 * np.pi
     dis[0], dis[1] = dis[0] * np.cos(ang) + dis[1] * np.sin(ang), dis[0] * np.sin(ang) - dis[1] * np.cos(ang)
     if abs(dis[0]) > 11 or abs(dis[1]) > 11 or abs(dis[2]) > 11:
         if abs(dis[0]) > 11:
             s = -1 if dis[0] < 0 else 1
-            dis[0] = s * max(20.0, abs(dis[0]))
+            dis[0] = s * min(130.0, max(20.0, abs(dis[0])))
         if abs(dis[1]) > 11:
             s = -1 if dis[1] < 0 else 1
-            dis[1] = s * max(20.0, abs(dis[1]))
+            dis[1] = s * min(130.0, max(20.0, abs(dis[1])))
         if abs(dis[2]) > 11:
-            s = -1 if dis[0] < 0 else 1
-            dis[2] = s * max(20.0, abs(dis[2]))
+            s = -1 if dis[2] < 0 else 1
+            dis[2] = s * min(45.0, max(20.0, abs(dis[2])))
 
         dis = dis / 100.0
-        backend.drone.go(dis[0], dis[1], dis[2])
+        backend.drone.go(dis[0], -dis[1], dis[2])
 
         state = backend.drone.get_state()
         if state.mid == -1:
+            return
+        if np.linalg.norm(vec3(prestate.x, prestate.y, prestate.z) - vec3(state.x, state.y, state.z)) < 3:
+            go_logger.info('maybe mid error')
             return
         dis = vec3(x, y, z)*100 - vec3(state.x, state.y, state.z)
         dis = dis / 100.0
@@ -138,22 +142,22 @@ def goto_old(backend: tello_abs.TelloBackendService, x, y, z, flag, itridx=0, to
     dis_u = dis[2] / 100.0
     if not flag():
         return
-    if dis_f > 0.15 or abs(dis_u) > 0.15:
-        if abs(dis_u) > 0.15:
+    if dis_f > 0.15 or abs(dis_u) > 0.11:
+        if abs(dis_u) > 0.11:
             sign = -1 if dis_u < 0 else 1
             dis_u = sign * max(0.2, abs(dis_u))
         backend.drone.go(dis_f, 0, dis_u)
         state = backend.drone.get_state()
         if state.mid != -1:
             dis = vec3(x, y, z)*100 - vec3(state.x, state.y, state.z)
-            dis[2] *= 2
+            dis[2] *= 1.7
             dis = np.linalg.norm(dis/100.0)
             go_logger.info("dis %.2f" % dis)
             if dis > tol:
                 goto_old(backend, x, y, z, flag, itridx=itridx + 1, tol=tol)
 
 
-goto = goto_old
+goto = goto_new
 
 
 if __name__ == '__main__':

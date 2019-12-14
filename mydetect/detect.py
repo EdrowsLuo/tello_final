@@ -22,7 +22,7 @@ class Detect(object):
         self.logger = sl4p.Sl4p('my_detect')
         if weights is None:
             main_dir = os.path.split(os.path.abspath(__file__))[0]
-            weights = os.path.join(main_dir, 'weights/checkpoint_efficientdet-d0_61.pth')
+            weights = os.path.join(main_dir, 'weights/checkpoint_efficientdet-d4_89.pth')
         self.weights = weights
         self.size_image = size_image
         self.device = torch.device(
@@ -107,7 +107,7 @@ class Detect(object):
 
 
 if __name__ == '__main__':
-    detobj = Detect()
+    detobj = Detect(0.3)
     img = cv2.imread('D:\\ros\\final\\tello_final\\image_detecte\\data\\samples\\0.jpg')
     l = detobj.detect(img)
     for s in l:
