@@ -121,8 +121,8 @@ def main():
         YoloService.preload
     ]))
     tello_center.register_service(tello_abs.TelloBackendService())  # 提供基础控制和数据
-    # tello_center.register_service(tello_abs.ReactiveImageAndStateService())
-    # tello_center.register_service(tello_image_process.ImageProcessService())
+    tello_center.register_service(tello_abs.ReactiveImageAndStateService())
+    tello_center.register_service(tello_image_process.ImageProcessService())
     tello_center.register_service(YoloService())
     tello_center.start_all_service()
     tello_center.lock_loop()
