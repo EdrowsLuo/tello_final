@@ -1,4 +1,5 @@
 # tello_final
+[赛事主页](https://github.com/zoeyuchao/thudrone)
 ## 最终方案
 ### 无人机移动控制方案  
 关键的移动控制只有两个，都是对sdk里的go和rotate指令的封装，位于utils.drone_utils内  
